@@ -238,7 +238,7 @@ label.line {
 	font-size:14px;
 	line-height:27px;
 	color:#d0d0d0;
-	margin:26px 0px;
+	margin:23px 0px;
 }
 .skills-left,.skills-right,.blog-grids{
 	margin:5em 0 0;
@@ -353,125 +353,6 @@ label.line {
 }
 /*--//download --*/
 
-
-/*-- projects --*/
-.projects {
-    background: url(../images/projectbg.jpg) no-repeat 0px 0px;
-    background-size: cover;
-    -webkit-background-size: cover;
-    -moz-background-size: cover;
-    -o-background-size: cover;
-    min-height: 533px;
-    position: relative;
-    padding-top: 12em;
-}
-.cycle{
-	text-align:center;
-}
-.cycle span{
-	width:284px;
-	height:284px;
-	display:inline-block;
-	background:url(../images/cycle.png) no-repeat 0px 0px;
-}
-.people-grid {
-	position: absolute;
-	left: 57.5%;
-	top: 58%;
-	text-align: center;
-}
-.total-project {
-	position: absolute;
-	top: -43%;
-	left: 44%;
-	text-align: center;
-}
-.project-grid p{
-	color: #FFF;
-	font-size: 1.8em;
-	text-transform: uppercase;
-	font-weight: 300;
-	margin: 0;
-}
-.project-grid span{
-	width:70px;
-	height:70px;
-	display:inline-block;
-	background:#FFF;
-	border-radius:30em;
-	-webkit-border-radius:30em;
-	-moz-border-radius:30em;
-	-o-border-radius:30em;
-	-ms-border-radius:30em;
-	margin-top:1em;
-}
-.project-grid:hover span{
-	background:#5dbed2;
-}
-.project-grid span i{
-	width:40px;
-	height:40px;
-	display:inline-block;
-	background:url(../images/project-icons.png) no-repeat 0px 0px;
-}
-.project-grid span i.p-icon{
-	margin-top: 0.9em;
-	margin-left: 0.6em;
-}
-.clientsgrid{
-	position: absolute;
-	left: 36.5%;
-	top: 59%;
-	text-align: center;
-}
-.clientsgrid div{
-	position: absolute;
-	left: -100px;
-	top: 52px;
-}
-.clientsgrid span i.p-icon{
-	background-position: -43px 0px;
-}
-/*--*/
-.people-grid div{
-	position: absolute;
-	left: 25px;
-	top: 52px;
-}
-.people-grid span i.p-icon{
-	background-position: -87px 0px;
-}
-.project-grids{
-	position: relative;
-}
-.catch-on{
-	padding:2.5em 0;
-}
-.catch-on p{
-	color:#595959;
-	font-size:1.5em;
-	text-transform:uppercase;
-	margin:0;
-	padding:0;
-	font-weight:400;
-}
-.catch-on p  a.catch{
-	background:#5dbed2;
-	padding:0.7em 1.2em;
-	display:inline-block;
-	color:#FFF;
-	font-size:0.875em;
-	border-radius:0.4em;
-	-webkit-border-radius:0.4em;
-	-moz-border-radius:0.4em;
-	-o-border-radius:0.4em;
-	text-decoration:none;
-	margin-left:1em;
-	-webkit-appearance: none;
-}
-.catch-on p  a.catch:hover{
-	background:#595959;
-}
 
 /*--portfolio--*/
 /*--SAP--*/

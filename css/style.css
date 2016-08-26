@@ -229,6 +229,17 @@ label.line {
 	color:#d0d0d0;
 	margin:23px 0px;
 }
+.skills-right h4{
+	color:#fff;
+	font-size:23px;
+	text-align:left;
+}
+.skills-right p{
+	font-size:14px;
+	line-height:27px;
+	color:#d0d0d0;
+	margin:26px 0px;
+}
 .skills-left,.skills-right,.blog-grids{
 	margin:5em 0 0;
 }

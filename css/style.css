@@ -123,22 +123,6 @@ h4.agile{
 	color:#0076b4;
 	border: 2px solid #0076b4;
 }
-.b-part3 .fa-pinterest-p:hover{
-	color:#ba221d;
-	border: 2px solid #ba221d;
-}
-.b-part3 .fa-vimeo:hover{
-	color:#0baee9;
-	border: 2px solid #0baee9;
-}
-.b-part3 .fa-google-plus:hover{
-	color:#dd4e40;
-	border: 2px solid #dd4e40;
-}
-.b-part3  .fa-tumblr:hover{
-	color:#36465d;
-	border: 2px solid #36465d;
-}
 .b-part3 .fa-facebook,.b-part3 .fa-linkedin,.b-part3 .fa-pinterest{
 	margin-bottom:20px
 }

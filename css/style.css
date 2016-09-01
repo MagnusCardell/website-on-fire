@@ -61,7 +61,7 @@ img {
 
 /*-- banner --*/
 .banner{
-	padding:95px 0px;
+	padding:95px 95px;
 	background:url(../images/banner6.jpg) no-repeat 0px 0px;
 	background-size:cover;
 	min-height:350px;
@@ -123,7 +123,7 @@ h4.agile{
 	color:#0076b4;
 	border: 2px solid #0076b4;
 }
-.b-part3 .fa-facebook,.b-part3 .fa-linkedin,.b-part3 .fa-pinterest{
+.b-part3 .fa-facebook,.b-part3 .fa-linkedin{
 	margin-bottom:20px
 }
 .b-part4{

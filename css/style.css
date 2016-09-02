@@ -62,7 +62,7 @@ img {
 /*-- banner --*/
 .banner{
 	padding:95px 0px;
-	background:url(../images/banner6.jpg) no-repeat 0px 95px;
+	background:url(../images/banner6.jpg) no-repeat 0px 0px;
 	background-size:cover;
 	min-height:350px;
 }

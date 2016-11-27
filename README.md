@@ -1,5 +1,3 @@
-# Portfolio website using HTML and CSS
+# My personal website using HTML CSS and JavaScript.
 
-Details:
-
-TBA
+GITHUB SCRIPT - caseycarborough.com/projects/github-activity 

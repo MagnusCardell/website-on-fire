@@ -1,3 +1,5 @@
-# website-on-ice
+# Portfolio website using HTML and CSS
 
-Website project currently under construction. Come back soon updates
+Details:
+
+TBA

@@ -1,0 +1,22 @@
+{
+  "name": "website-on-ice",
+  "version": "2.0.0",
+  "description": "Portfolio webpage and sandbox",
+  "main": "index.js",
+  "scripts": {
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MagnusCardell/website-on-ice.git"
+  },
+  "author": "Magnus Cardell",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/MagnusCardell/website-on-ice/issues"
+  },
+  "homepage": "https://github.com/MagnusCardell/website-on-ice#readme",
+  "dependencies": {
+    "express": "^4.16.4"
+  }
+}

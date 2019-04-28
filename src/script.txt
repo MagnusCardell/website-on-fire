@@ -1,0 +1,22 @@
+<span id="a">guest@magnuscardell</span>:<span id="b">~</span><span id="c">$</span> cd MagnusCardell/
+<span id="a">guest@magnuscardell</span>:<span id="b">~</span><span id="c">$</span> ls
+projects
+assets
+about_me.txt
+resume.pdf
+
+<span id="a">guest@magnuscardell</span>:<span id="b">~</span><span id="c">$</span> cat about_me.txt
+
+Hello, I am a Software Developer currently studying a M.S. in Software Engineering of Distributed Systems at KTH Royal Institute of Technology. You can find my most recent employment/internship/academic history in <a href="assets/files/resume_magnuscardell.pdf">resume.pdf</a> or by typing "cat resume.pdf"
+
+You can also find me on these social platforms: 
+<a href="https://github.com/MagnusCardell"> Github</a>
+<a href="https://www.linkedin.com/in/magnuscardell/">LinkedIn</a>
+
+Contact me at 
+<a> cardell.magnus@gmail.com </a>
+
+This page is currently under development and will hopefully soon feature user interaction with this terminal...
+
+<span id="a">guest@magnuscardell</span>:<span id="b">~</span><span id="c">$</span> 
+

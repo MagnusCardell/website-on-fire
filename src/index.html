@@ -1,57 +1,78 @@
-<html> 
-  <head> 
-    <title>Magnus Cardell</title> 
-    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script> 
-  </head> 
-  <body> 
-    <script type="text/javascript" src="src/index.js"> </script> 
-    <div id="console"></div> 
-  </body> 
-</html> 
+<html>
+
+<head>
+	<title>Magnus Cardell</title>
+	<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+	<!-- Global site tag (gtag.js) - Google Analytics -->
+	<script async src="https://www.googletagmanager.com/gtag/js?id=UA-123232974-2"></script>
+	<script>
+		window.dataLayer = window.dataLayer || [];
+		function gtag() { dataLayer.push(arguments); }
+		gtag('js', new Date());
+
+		gtag('config', 'UA-123232974-2');
+	</script>
+
+</head>
+
+<body>
+	<script type="text/javascript" src="src/index.js"> </script>
+	<div id="console"></div>
+</body>
+
+</html>
 
 <style>
-body {
-	background-color: #000
-}
+	body {
+		background-color: #000
+	}
 
-#console {
-	font-family: courier, monospace;
-	color: #fff;
-	width:750px;
-	margin-left:auto;
-	margin-right:auto;
-	margin-top:100px;
-	font-size:14px;
-}
+	#console {
+		font-family: courier, monospace;
+		color: #fff;
+		width: 750px;
+		margin-left: auto;
+		margin-right: auto;
+		margin-top: 100px;
+		font-size: 14px;
+	}
 
-a {
-	color: #0bc;
-	text-decoration: none;
-}
+	a {
+		color: #0bc;
+		text-decoration: none;
+	}
 
-#a {
-	color: #0f0;
-}
+	#a {
+		color: #0f0;
+	}
 
-#c {
-	color: #0bc;
-}
+	#c {
+		color: #0bc;
+	}
 
-#b {
-	color: #ff0096;
-}
+	#b {
+		color: #ff0096;
+	}
 
-#k {
-    	animation: change 1s;
-}
+	#k {
+		animation: change 1s;
+	}
 
-#op{
-    	color: #888888
-}
+	#op {
+		color: #888888
+	}
 
-@keyframes change {
-    	0%  { color:  #0f0; }
-    	50% { color:  #0f0; }
-    	99% { color: black; }
-}
+	@keyframes change {
+		0% {
+			color: #0f0;
+		}
+
+		50% {
+			color: #0f0;
+		}
+
+		99% {
+			color: black;
+		}
+	}
 </style>

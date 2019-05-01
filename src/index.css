@@ -1,44 +1,137 @@
+@import url('https://fonts.googleapis.com/css?family=Ubuntu+Mono');
+@import url('https://fonts.googleapis.com/css?family=Ubuntu');
+
 body {
-	background-color: #000
+  background: linear-gradient(45deg, #57003f 0%,#f57453 100%);
+  font-family: 'Ubuntu';
 }
 
-#console {
-	font-family: courier, monospace;
-	color: #fff;
-	width:750px;
-	margin-left:auto;
-	margin-right:auto;
-	margin-top:100px;
-	font-size:14px;
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+
 }
 
-a {
-	color: #0bc;
-	text-decoration: none;
+.half {
+    width: 50%;
+    height: 100%;
+    float: left;
+}
+.quarter {
+    width: 100%;
+    height: 50%;
+    float: left;
 }
 
-#a {
-	color: #0f0;
+.right-border {
+    border-right: solid 1px #87d441;
+}
+.low-border {
+    border-bottom: solid 1px #87d441;
+    
+}
+.terminal {
+  width: 90%;
+  height: 90%;
+  box-shadow: 2px 4px 10px rgba(0,0,0,.5);
+  float: left;
 }
 
-#c {
-	color: #0bc;
+.toolbar {
+  background: linear-gradient(#504b45 0%,#3c3b37 100%);
+  width: 100%;
+  padding: 0 8px;
+  box-sizing: border-box;
+  height: 25px;
+  display: flex;
+  align-items: center;
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
 }
 
-#b {
-	color: #ff0096;
+.toolbar_buttons {
+  display: flex;
+  align-items: center;
 }
 
-#k {
-    	animation: change 1s;
+.toolbar_button {
+  width: 12px;
+  height: 12px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 100%;
+  padding: 0;
+  font-size: 7px;
+  background: linear-gradient(#7d7871 0%, #595953 100%);
+  text-shadow: 0px 1px 0px rgba(255,255,255,0.2);
+  box-shadow: 0px 0px 1px 0px #41403A,0px 1px 1px 0px #474642;
+  border: none;
+  margin-right: 4px;
+
+}
+.toolbar_button:hover {
+  cursor: pointer;
+}
+.toolbar_button--exit {
+  background: #f25d2b;
+  background: linear-gradient(#f37458 0%, #de4c12 100%);
+  background-clip: padding-box;
+}
+.toolbar_button:focus {
+  outline: none;
 }
 
-#op{
-    	color: #888888
+.toolbar_user {
+  color: #d5d0ce;
+  margin-left: 4px;
+  font-size: 12px;
+  line-height: 14px;
+  margin-bottom: 1px;
+}
+.body {
+  background: rgba(56, 4, 40, .9);
+  height: 100%;
+  width: 100%;
+  margin-top: -1px;
+  padding-top: 2px;
+  font-family: 'Ubuntu mono';
+  word-break: break-all;
+}
+.text {
+  color: #ddd;
 }
 
-@keyframes change {
-    	0%  { color:  #0f0; }
-    	50% { color:  #0f0; }
-    	99% { color: black; }
+.prompt {
+  display: flex;
+}
+
+.user {
+  color: #87d441;
+}
+.directory {
+  color: #6d85a9;
+}
+.dollarsign {
+  color: #ddd;
+}
+.cursor {
+  height: 17px;
+  width: 8px;
+  background: white;
+  display: block;
+  margin-left: 8px;
+  animation: 1000ms ease infinite alternate blink;
+}
+
+@keyframes blink {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
 }

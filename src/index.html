@@ -2,77 +2,82 @@
 
 <head>
 	<title>Magnus Cardell</title>
-	<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+	<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+	<link rel="icon" href="/assets/favicon.ico" type="image/x-icon" />
 	<!-- Global site tag (gtag.js) - Google Analytics -->
+	<script type="text/javascript" src="src/index.js"> </script>
+	<link rel="stylesheet" type="text/css" href="src/index.css" media="screen" title="Default" />
 	<script async src="https://www.googletagmanager.com/gtag/js?id=UA-123232974-2"></script>
-	<script>
+	<!-- <script>
 		window.dataLayer = window.dataLayer || [];
 		function gtag() { dataLayer.push(arguments); }
 		gtag('js', new Date());
-
 		gtag('config', 'UA-123232974-2');
-	</script>
-
+	</script> -->
 </head>
 
 <body>
-	<script type="text/javascript" src="src/index.js"> </script>
-	<div id="console"></div>
+	<div class="container">
+		<!-- <div id="intro">
+			<h1>Magnus Cardell</h1>
+			<h2>Personal webpage</h2>
+		</div> -->
+		<div id="console">
+			<noscript>
+				<p>This page requires javascript to work. Please enable and reload the page.</p>
+			</noscript>
+			<div class="terminal">
+				<div class="toolbar">
+						<div class="toolbar_buttons">
+						<button class="toolbar_button toolbar_button--exit">&#10005;</button>
+						<button class="toolbar_button">&#9472;</button>
+						<button class="toolbar_button">&#9723;</button>
+						</div>
+						<p class="toolbar_user"> Magnus Cardell portfolio</p>
+				</div>
+				<div class="half">
+					<div class="right-border">
+						<div class="body">
+							<div class="text" id="output"></div>
+							<span class="prompt user" id="usr"></span>
+							<span class="prompt directory" id="dir"></span>
+							<span class="dollarsign">$</span>
+							<span class="text" id="lh"></span>
+							<span class="text cursor" id="pointer">&nbsp;</span>
+							<span class="text" id="rh"></span>
+						</div>
+					</div>
+				</div>
+
+				
+				<div class="half">
+					<div class="quarter">
+						<div class="low-border">
+							<div class="body" style="height: 99%;">
+								<div class="text" id="output2"></div>
+								<span class="prompt user" id="usr2"></span>
+								<span class="prompt directory" id="dir2"></span>
+								<span class="dollarsign">$</span>
+								<span class="text" id="lh2"></span>
+								<span class="text cursor" id="pointer2">&nbsp;</span>
+								<span class="text" id="rh2"></span>
+							</div>
+						</div>
+					</div>
+					<div class="quarter">
+							<div class="body">
+								<div class="text" id="output3"></div>
+								<span class="prompt user" id="usr3"></span>
+								<span class="prompt directory" id="dir3"></span>
+								<span class="dollarsign">$</span>
+								<span class="text" id="lh3"></span>
+								<span class="text cursor" id="pointer3">&nbsp;</span>
+								<span class="text" id="rh3"></span>
+							</div>
+						</div>
+				</div>
+			</div>
+		</div>
+	</div>
 </body>
-
 </html>
-
-<style>
-	body {
-		background-color: #000
-	}
-
-	#console {
-		font-family: courier, monospace;
-		color: #fff;
-		width: 750px;
-		margin-left: auto;
-		margin-right: auto;
-		margin-top: 100px;
-		font-size: 14px;
-	}
-
-	a {
-		color: #0bc;
-		text-decoration: none;
-	}
-
-	#a {
-		color: #0f0;
-	}
-
-	#c {
-		color: #0bc;
-	}
-
-	#b {
-		color: #ff0096;
-	}
-
-	#k {
-		animation: change 1s;
-	}
-
-	#op {
-		color: #888888
-	}
-
-	@keyframes change {
-		0% {
-			color: #0f0;
-		}
-
-		50% {
-			color: #0f0;
-		}
-
-		99% {
-			color: black;
-		}
-	}
-</style>

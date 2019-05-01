@@ -16,7 +16,3 @@ You can also find me on these social platforms:
 Contact me at 
 <a> cardell.magnus@gmail.com </a>
 
-This page is currently under development and will hopefully soon feature user interaction with this terminal...
-
-<span id="a">guest@magnuscardell</span>:<span id="b">~</span><span id="c">$</span> 
-

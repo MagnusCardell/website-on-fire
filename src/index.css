@@ -104,9 +104,8 @@ body {
 .text {
   color: #ddd;
 }
-
 .prompt {
-  display: flex;
+  display: inline;
 }
 
 .user {
@@ -121,9 +120,8 @@ body {
 .cursor {
   height: 17px;
   width: 8px;
+  position: absolute;
   background: white;
-  display: block;
-  margin-left: 8px;
   animation: 1000ms ease infinite alternate blink;
 }
 

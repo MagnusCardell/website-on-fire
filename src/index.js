@@ -1,5 +1,7 @@
 var Terminal = {
-	usr: "<span id='a'>guest@magnuscardell</span>:<span id='b'>~</span><span id='c'>$</span>",
+	usr2: "<span id='a'>guest@magnuscardell</span>:<span id='b'>~</span><span id='c'>$</span>",
+	usr: "user@magnuscardell",
+	dir: "~/",
 	text: '',
 	index: 0,
 	speed: 5,
@@ -103,7 +105,8 @@ var Terminal = {
 			$('#cursor').html('&nbsp;');
 		}
 		$('#rh').text(right);
-		$('#usr').html(Terminal.usr);
+		$('#usr').text(Terminal.usr);
+		$('#dir').text(Terminal.dir);
 		return;
 	},
 	content: function () {

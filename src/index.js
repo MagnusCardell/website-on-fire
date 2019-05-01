@@ -1,5 +1,4 @@
 var Terminal = {
-	usr2: "<span id='a'>guest@magnuscardell</span>:<span id='b'>~</span><span id='c'>$</span>",
 	usr: "user@magnuscardell",
 	dir: "~/",
 	text: '',
@@ -24,7 +23,6 @@ var Terminal = {
 				e.preventDefault();
 			}
 			else if(e.keyCode == 8){ //backspace
-				console.log("backspace");
 				Terminal.deleteBuffer(e.shiftKey);
 				e.preventDefault();
 			}
@@ -71,9 +69,9 @@ var Terminal = {
 	},
 	deleteBuffer: function(completely) {
 		var offset = completely ? 1 : 0;
-		if (this.pos >= (1 - offset)) {
-			var lh = this.buffer.substr(0, this.pos - 1 + offset);
-			var rh = this.buffer.substr(this.pos + offset, this.buffer.length - this.pos - offset);
+		if (this.input_p >= (1 - offset)) {
+			var lh = this.input.substr(0, this.input_p - 1 + offset);
+			var rh = this.input.substr(this.input_p + offset, this.input.length - this.pos - offset);
 			this.input = lh + rh;
 			this.input_p -= 1 - offset;
 			this.updateInputfield();

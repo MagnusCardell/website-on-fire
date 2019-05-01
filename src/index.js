@@ -23,16 +23,14 @@ var Terminal = {
 				e.preventDefault();
 			}
 			else if(e.keyCode == 8){ //backspace
-				Terminal.deleteBuffer(e.shiftKey);
+				Terminal.deleteBuffer(e.shiftKey, 0);
 				e.preventDefault();
 			}
 			else if(e.keyCode == 46){ //del
-				console.log("del");
-				Terminal.deleteBuffer2();
+				Terminal.deleteBuffer(e.shiftKey, 1);
 				e.preventDefault();
 			}
 			else if(e.keyCode == 13){ //return
-				console.log("return");
 				Terminal.processBuffer();
 				e.preventDefault();
 			}
@@ -67,18 +65,40 @@ var Terminal = {
 		Terminal.input_p++;
 		Terminal.updateInputfield();
 	},
-	deleteBuffer: function(completely) {
+	deleteBuffer: function(completely, pos) {
 		var offset = completely ? 1 : 0;
-		if (this.input_p >= (1 - offset)) {
-			var lh = this.input.substr(0, this.input_p - 1 + offset);
-			var rh = this.input.substr(this.input_p + offset, this.input.length - this.pos - offset);
+		if (this.input_p >= (1 - offset+ pos)) {
+			var lh = this.input.substr(0, this.input_p - 1 + offset + pos);
+			var rh = this.input.substr(this.input_p + offset + pos, this.input.length - this.pos - offset + pos);
 			this.input = lh + rh;
-			this.input_p -= 1 - offset;
+			this.input_p -= 1 - offset + pos;
 			this.updateInputfield();
 		}
 	},
+	processBuffer: function() {
+		if(!Terminal.input.length > 0){
+			return;
+		}
+		Terminal.printOneliner(Terminal.input);
+		Terminal.history.push(Terminal.input);
+		Terminal.history_p++;
+		Terminal.input = '';
+		Terminal.input_p = 0;
+		Terminal.updateInputfield();
+		Terminal.process();
+	},
+	printOneliner: function(str){
+		var c ="<div class='onelin'><span class='prompt user'>" + Terminal.usr + "</span><!--" +
+							 "--><span class='prompt directory'>" + Terminal.dir + "</span><!--" +
+							 "--><span class='prompt dollarsign'>&gt;&nbsp;</span><!--" +
+							 "--><span class='prompt text'>" + str + "</span><!--";
+		$('#output').append(c);
+	},
+	process: function() {
+		$('#output').append("Command not recognized");
+	},
 
-	updateInputfield: function(){
+	updateInputfield: function() {
 		var left = '', pointer = ' ', right = '';
 		if (this.input_p < 0) {
 			this.input_p = 0;

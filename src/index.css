@@ -1,9 +1,27 @@
 @import url('https://fonts.googleapis.com/css?family=Ubuntu+Mono');
 @import url('https://fonts.googleapis.com/css?family=Ubuntu');
 
+:root {
+  --background-color: linear-gradient(45deg, #57003f 0%, #f57453 100%);
+}
+
 body {
-  background: linear-gradient(45deg, #57003f 0%,#f57453 100%);
-  font-family: 'Ubuntu';
+  background: var(--background-color);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  margin: 0px;
+  overflow: hidden;
+}
+
+h1,h2,h3,a,p {
+  font-family: "Ubuntu-mono", sans-ser;
+  color: white;
+  font-weight: 400;
+}
+
+a{
+  text-decoration: none;
 }
 
 .container {
@@ -11,36 +29,37 @@ body {
   justify-content: center;
   align-items: center;
   height: 100%;
-
 }
 
 .half {
-    width: 50%;
-    height: 100%;
-    float: left;
-}
-.quarter {
-    width: 100%;
-    height: 50%;
-    float: left;
-}
-
-.right-border {
-    border-right: solid 1px #87d441;
-}
-.low-border {
-    border-bottom: solid 1px #87d441;
-    
-}
-.terminal {
-  width: 90%;
-  height: 90%;
-  box-shadow: 2px 4px 10px rgba(0,0,0,.5);
+  width: 50%;
+  height: 100%;
   float: left;
 }
 
+.quarter {
+  width: 100%;
+  height: 50%;
+  float: left;
+}
+
+.right-border {
+  border-right: solid 1px #87d441;
+}
+
+.low-border {
+  border-bottom: solid 1px #87d441;
+
+}
+
+.terminal {
+  min-width: 50vh;
+  width: 90%;
+  height: 90%;
+}
+
 .toolbar {
-  background: linear-gradient(#504b45 0%,#3c3b37 100%);
+  background: linear-gradient(#504b45 0%, #3c3b37 100%);
   width: 100%;
   padding: 0 8px;
   box-sizing: border-box;
@@ -67,20 +86,27 @@ body {
   padding: 0;
   font-size: 7px;
   background: linear-gradient(#7d7871 0%, #595953 100%);
-  text-shadow: 0px 1px 0px rgba(255,255,255,0.2);
-  box-shadow: 0px 0px 1px 0px #41403A,0px 1px 1px 0px #474642;
+  text-shadow: 0px 1px 0px rgba(255, 255, 255, 0.2);
+  box-shadow: 0px 0px 1px 0px #41403A, 0px 1px 1px 0px #474642;
   border: none;
   margin-right: 4px;
 
 }
+
 .toolbar_button:hover {
   cursor: pointer;
 }
+
+.oneline {
+  display: left;
+}
+
 .toolbar_button--exit {
   background: #f25d2b;
   background: linear-gradient(#f37458 0%, #de4c12 100%);
   background-clip: padding-box;
 }
+
 .toolbar_button:focus {
   outline: none;
 }
@@ -90,21 +116,22 @@ body {
   margin-left: 4px;
   font-size: 12px;
   line-height: 14px;
-  margin-bottom: 1px;
+  vertical-align: middle;
 }
+
 .body {
   background: rgba(56, 4, 40, .9);
   height: 100%;
   width: 100%;
   margin-top: -1px;
-  padding-top: 2px;
-  font-family: 'Ubuntu mono';
-  word-break: break-all;
-  overflow: hidden;/*TODO*/
+  overflow-wrap: break-word;
+  overflow: hidden;
 }
+
 .text {
-  color: #ddd;
+  color: white;
 }
+
 .prompt {
   display: inline;
 }
@@ -112,25 +139,29 @@ body {
 .user {
   color: #87d441;
 }
+
 .directory {
   color: #6d85a9;
 }
+
 .dollarsign {
   color: #ddd;
 }
+
 .cursor {
   height: 17px;
   width: 8px;
   position: absolute;
   background: white;
-  animation: 1000ms ease infinite alternate blink;
+  animation: 500ms ease infinite alternate blink;
 }
 
 @keyframes blink {
   0% {
     opacity: 0;
   }
-  100% {
+
+  99% {
     opacity: 1;
   }
 }

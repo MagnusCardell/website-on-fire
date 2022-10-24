@@ -3,7 +3,7 @@ var Terminal = {
 	dir: "~/",
 	text: '',
 	index: 0,
-	speed: 5,
+	speed: 3,
 	working: false,
 	file: "src/script.txt",
 	input: "",
@@ -17,57 +17,57 @@ var Terminal = {
 		});
 		//special keyboard listeners
 		$(document).keydown(function (e) {
-			if ( !Terminal.working && e.which >= 32 && e.which <= 126) {
+			if (!Terminal.working && e.which >= 32 && e.which <= 126) {
 				var c = String.fromCharCode(e.which).toLowerCase();
 				Terminal.appendBuffer(c);
 				e.preventDefault();
 			}
-			else if(e.keyCode == 8){ //backspace
+			else if (e.keyCode == 8) { //backspace
 				Terminal.deleteBuffer(e.shiftKey, 0);
 				e.preventDefault();
 			}
-			else if(e.keyCode == 46){ //del
+			else if (e.keyCode == 46) { //del
 				Terminal.deleteBuffer(e.shiftKey, 1);
 				e.preventDefault();
 			}
-			else if(e.keyCode == 13){ //return
+			else if (e.keyCode == 13) { //return
 				Terminal.processBuffer();
 				e.preventDefault();
 			}
-			else if(e.keyCode == 37){ //left
+			else if (e.keyCode == 37) { //left
 				console.log("left");
 				Terminal.bufferShift(-1);
 				e.preventDefault();
 			}
-			else if(e.code == 39){ //right
+			else if (e.code == 39) { //right
 				console.log("right");
 				Terminal.bufferRight(1);
 				e.preventDefault();
 			}
-			else if(e.keyCode == 38){ //up
+			else if (e.keyCode == 38) { //up
 				console.log("up");
 				Terminal.shiftHistory(-1);
 				e.preventDefault();
 			}
-			else if(e.keyCode == 40){ //down
+			else if (e.keyCode == 40) { //down
 				console.log("down");
 				Terminal.shiftHistory(1);
 				e.preventDefault();
 			}
-			
+
 		})
 	},
 
-	appendBuffer: function(c){
+	appendBuffer: function (c) {
 		var lh = Terminal.input.substr(0, Terminal.input_p);
-		var rh = Terminal.input.substr(Terminal.input_p, Terminal.input.length-Terminal.input_p);
+		var rh = Terminal.input.substr(Terminal.input_p, Terminal.input.length - Terminal.input_p);
 		Terminal.input = lh + c + rh;
 		Terminal.input_p++;
 		Terminal.updateInputfield();
 	},
-	deleteBuffer: function(completely, pos) {
+	deleteBuffer: function (completely, pos) {
 		var offset = completely ? 1 : 0;
-		if (this.input_p >= (1 - offset+ pos)) {
+		if (this.input_p >= (1 - offset + pos)) {
 			var lh = this.input.substr(0, this.input_p - 1 + offset + pos);
 			var rh = this.input.substr(this.input_p + offset + pos, this.input.length - this.pos - offset + pos);
 			this.input = lh + rh;
@@ -75,8 +75,8 @@ var Terminal = {
 			this.updateInputfield();
 		}
 	},
-	processBuffer: function() {
-		if(!Terminal.input.length > 0){
+	processBuffer: function () {
+		if (!Terminal.input.length > 0) {
 			return;
 		}
 		Terminal.printOneliner(Terminal.input);
@@ -85,20 +85,21 @@ var Terminal = {
 		Terminal.input = '';
 		Terminal.input_p = 0;
 		Terminal.updateInputfield();
-		Terminal.process();
+		Terminal.process(Terminal.input);
 	},
-	printOneliner: function(str){
-		var c ="<div class='onelin'><span class='prompt user'>" + Terminal.usr + "</span><!--" +
-							 "--><span class='prompt directory'>" + Terminal.dir + "</span><!--" +
-							 "--><span class='prompt dollarsign'>&gt;&nbsp;</span><!--" +
-							 "--><span class='prompt text'>" + str + "</span><!--";
+	printOneliner: function (str) {
+		var c = "<div class='onelin'><span class='prompt user'>" + Terminal.usr + "</span><!--" +
+			"--><span class='prompt directory'>" + Terminal.dir + "</span><!--" +
+			"--><span class='prompt dollarsign'>&gt;&nbsp;</span><!--" +
+			"--><span class='prompt text'>" + str + "</span><!--";
 		$('#output').append(c);
 	},
-	process: function() {
+	process: function (input) {
+		if(input === "cat resume.pdf")
 		$('#output').append("Command not recognized");
 	},
 
-	updateInputfield: function() {
+	updateInputfield: function () {
 		var left = '', pointer = ' ', right = '';
 		if (this.input_p < 0) {
 			this.input_p = 0;
@@ -130,7 +131,7 @@ var Terminal = {
 	content: function () {
 		return $("#output").html();
 	},
-	setWorking : function(b){
+	setWorking: function (b) {
 		this.working = b;
 	},
 
@@ -141,7 +142,6 @@ var Terminal = {
 			var rtn = new RegExp("\n", "g");
 
 			$("#output").html(text.replace(rtn, "<br/>"));
-			window.scrollBy(0, 50);
 		}
 	},
 	print_cursor: function () {
@@ -155,12 +155,7 @@ var Terminal = {
 
 Terminal.init();
 Terminal.setWorking(true);
-var timer = setInterval("t();", 20);
+var timer = setInterval("t();", 2);
 function t() {
 	Terminal.printScript();
-	if (Terminal.index > Terminal.text.length) {
-		clearInterval(timer);
-		Terminal.appendBuffer('');
-		Terminal.setWorking(false);
-	}
 }

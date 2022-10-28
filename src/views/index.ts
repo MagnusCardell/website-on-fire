@@ -1,4 +1,4 @@
-var Terminal = {
+let Terminal = {
 	usr: "user@magnuscardell",
 	dir: "~/",
 	text: '',
@@ -8,75 +8,69 @@ var Terminal = {
 	file: "src/script.txt",
 	input: "",
 	input_p: 0,
-	history: [],
+	history: [] as string[],
 	history_p: 0,
-	init: function () {
+	init () {
 		// setInterval(function () { Terminal.print_cursor(); }, 500);
-		$.get(Terminal.file, function (data) {
+		$.get(Terminal.file, data => {
 			Terminal.text = data.substring(0, data.length - 1);
 		});
-		//special keyboard listeners
-		$(document).keydown(function (e) {
+		$(document).on("keydown", e => {
 			if (!Terminal.working && e.which >= 32 && e.which <= 126) {
-				var c = String.fromCharCode(e.which).toLowerCase();
+				const c = String.fromCharCode(e.which).toLowerCase();
 				Terminal.appendBuffer(c);
 				e.preventDefault();
 			}
-			else if (e.keyCode == 8) { //backspace
+			else if (e.keyCode === 8) { // backspace
 				Terminal.deleteBuffer(e.shiftKey, 0);
 				e.preventDefault();
 			}
-			else if (e.keyCode == 46) { //del
+			else if (e.keyCode === 46) { // del
 				Terminal.deleteBuffer(e.shiftKey, 1);
 				e.preventDefault();
 			}
-			else if (e.keyCode == 13) { //return
+			else if (e.keyCode === 13) { // return
 				Terminal.processBuffer();
 				e.preventDefault();
 			}
-			else if (e.keyCode == 37) { //left
-				console.log("left");
-				Terminal.bufferShift(-1);
+			else if (e.keyCode === 37) { // left
+				// Terminal.bufferShift(-1);
 				e.preventDefault();
 			}
-			else if (e.code == 39) { //right
-				console.log("right");
-				Terminal.bufferRight(1);
+			else if (e.keyCode === 39) { // right
+				// Terminal.bufferRight(1);
 				e.preventDefault();
 			}
-			else if (e.keyCode == 38) { //up
-				console.log("up");
-				Terminal.shiftHistory(-1);
+			else if (e.keyCode === 38) { // up
+				// Terminal.shiftHistory(-1);
 				e.preventDefault();
 			}
-			else if (e.keyCode == 40) { //down
-				console.log("down");
-				Terminal.shiftHistory(1);
+			else if (e.keyCode === 40) { // down
+				// Terminal.shiftHistory(1);
 				e.preventDefault();
 			}
-
-		})
+		});
 	},
 
-	appendBuffer: function (c) {
-		var lh = Terminal.input.substr(0, Terminal.input_p);
-		var rh = Terminal.input.substr(Terminal.input_p, Terminal.input.length - Terminal.input_p);
+	appendBuffer (c: string) {
+		const lh = Terminal.input.substr(0, Terminal.input_p);
+		const rh = Terminal.input.substr(Terminal.input_p, Terminal.input.length - Terminal.input_p);
 		Terminal.input = lh + c + rh;
 		Terminal.input_p++;
 		Terminal.updateInputfield();
 	},
-	deleteBuffer: function (completely, pos) {
-		var offset = completely ? 1 : 0;
+	deleteBuffer (completely: boolean, pos: number) {
+		const offset = completely ? 1 : 0;
 		if (this.input_p >= (1 - offset + pos)) {
-			var lh = this.input.substr(0, this.input_p - 1 + offset + pos);
-			var rh = this.input.substr(this.input_p + offset + pos, this.input.length - this.pos - offset + pos);
+			const lh = this.input.substr(0, this.input_p - 1 + offset + pos);
+			const rh = this.input.substr(this.input_p + offset + pos, this.input.length - pos - offset + pos);
 			this.input = lh + rh;
 			this.input_p -= 1 - offset + pos;
 			this.updateInputfield();
 		}
 	},
-	processBuffer: function () {
-		if (!Terminal.input.length > 0) {
+	processBuffer () {
+		if (!(Terminal.input.length > 0)) {
 			return;
 		}
 		Terminal.printOneliner(Terminal.input);
@@ -87,20 +81,24 @@ var Terminal = {
 		Terminal.updateInputfield();
 		Terminal.process(Terminal.input);
 	},
-	printOneliner: function (str) {
-		var c = "<div class='onelin'><span class='prompt user'>" + Terminal.usr + "</span><!--" +
+	printOneliner (str: string) {
+		const c = "<div class='onelin'><span class='prompt user'>" + Terminal.usr + "</span><!--" +
 			"--><span class='prompt directory'>" + Terminal.dir + "</span><!--" +
 			"--><span class='prompt dollarsign'>&gt;&nbsp;</span><!--" +
 			"--><span class='prompt text'>" + str + "</span><!--";
 		$('#output').append(c);
 	},
-	process: function (input) {
-		if(input === "cat resume.pdf")
+	process (input: string) {
+		if(input === "cat about_me.txt"){
+			Terminal.printScript();
+		}
 		$('#output').append("Command not recognized");
 	},
 
-	updateInputfield: function () {
-		var left = '', pointer = ' ', right = '';
+	updateInputfield () {
+		let left = '';
+		let pointer = ' ';
+		let right = '';
 		if (this.input_p < 0) {
 			this.input_p = 0;
 		}
@@ -117,10 +115,9 @@ var Terminal = {
 			right = this.input.substr(this.input_p + 1, this.input.length - this.input_p - 1);
 		}
 
-		//console.log(left + " " + pointer + " " + right);
 		$('#lh').html(left);
 		$('#pointer').html(pointer);
-		if (pointer == ' ') {
+		if (pointer === ' ') {
 			$('#cursor').html('&nbsp;');
 		}
 		$('#rh').text(right);
@@ -128,25 +125,25 @@ var Terminal = {
 		$('#dir').text(Terminal.dir);
 		return;
 	},
-	content: function () {
+	content () {
 		return $("#output").html();
 	},
-	setWorking: function (b) {
+	setWorking (b: boolean) {
 		this.working = b;
 	},
 
-	printScript: function () {
+	printScript () {
 		if (Terminal.text) {
 			Terminal.index += Terminal.speed;
-			var text = Terminal.text.substring(0, Terminal.index)
-			var rtn = new RegExp("\n", "g");
+			const text = Terminal.text.substring(0, Terminal.index)
+			const rtn = new RegExp("\n", "g");
 
 			$("#output").html(text.replace(rtn, "<br/>"));
 		}
 	},
-	print_cursor: function () {
-		var cont = this.content();
-		if (cont.substring(cont.length - 1, cont.length) == "|")
+	print_cursor () {
+		const cont = this.content();
+		if (cont.substring(cont.length - 1, cont.length) === "|")
 			$("#output").html($("#output").html().substring(0, cont.length - 1));
 		else
 			$("#output").append("|");
@@ -155,7 +152,12 @@ var Terminal = {
 
 Terminal.init();
 Terminal.setWorking(true);
-var timer = setInterval("t();", 2);
+let timer = setInterval("t();", 2);
 function t() {
 	Terminal.printScript();
+	if (Terminal.index > Terminal.text.length) {
+		clearInterval(timer);
+		Terminal.appendBuffer('');
+		Terminal.setWorking(false);
+	}
 }

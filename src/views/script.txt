@@ -1,7 +1,7 @@
 
 <span class="prompt user">guest@magnuscardell</span><span class="prompt directory">~/</span><span class="prompt dollarsign">>&nbsp;</span><span class="prompt text">cat about_me.txt</span>
 
-Hello, I am a driven software developer who loves technical challenges and innovation. With experience developing software in industries like finance, defence, and education, Magnus contributes to problem solving and decision-making processes that apply to a variety of company contexts. These skills have articulated my passion fro user-centric product that incorporate modern development principles like scalability and reliance. My core contribution is my ability to quickly envelop myself in new systems while collaborating with team members to find optimal solutions. 
+Hello, I am a driven software developer who loves technical challenges and innovation. My core contribution is my ability to quickly envelop myself in new systems while collaborating with team members to find optimal solutions. 
 
 You can find my most recent employment/internship/academic history in <a href="assets/files/resume_magnuscardell.pdf">resume.pdf</a> or by typing "cat resume.pdf"
 

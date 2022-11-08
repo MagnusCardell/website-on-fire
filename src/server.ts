@@ -1,8 +1,7 @@
-import express, { Express, Request, Response } from 'express';
-import path from 'path';
-import * as routes from "./routes";
-
-const app: Express = express();
+const express = require('express');
+const path = require('path');
+const routes = require('./routes')
+const app = express();
 const port = process.env.PORT;
 
 app.use(express.json());

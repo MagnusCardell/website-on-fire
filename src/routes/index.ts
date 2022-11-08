@@ -1,10 +1,8 @@
-import * as express from "express";
-
-export const register = (app: express.Application) => {
-    app.get("/", (req: any, res) => {
+const register = (app:any) => {
+    app.get("/", (req: any, res: any) => {
         res.render("index", {
-        title: 'Magnus Cardell'
+            title: 'Magnus Cardell'
+        });
     });
-    });
-
 };
+module.exports = { register };

@@ -1,18 +1,18 @@
-let Terminal = {
+const Terminal = {
 	usr: "user@magnuscardell",
 	dir: "~/",
 	text: '',
 	index: 0,
 	speed: 3,
 	working: false,
-	file: "src/script.txt",
+	file: "files/script.txt",
 	input: "",
 	input_p: 0,
 	history: [] as string[],
 	history_p: 0,
 	init () {
 		// setInterval(function () { Terminal.print_cursor(); }, 500);
-		$.get(Terminal.file, data => {
+		$.get(Terminal.file, (data: string) => {
 			Terminal.text = data.substring(0, data.length - 1);
 		});
 		$(document).on("keydown", e => {
@@ -152,8 +152,8 @@ let Terminal = {
 
 Terminal.init();
 Terminal.setWorking(true);
-let timer = setInterval("t();", 2);
-function t() {
+const timer = setInterval(terminal_function, 2);
+function terminal_function() {
 	Terminal.printScript();
 	if (Terminal.index > Terminal.text.length) {
 		clearInterval(timer);

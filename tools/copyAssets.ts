@@ -1,5 +1,5 @@
+const {cp, rm} = require("shelljs");
 
-import * as shell from "shelljs";
-
-shell.cp("-R", ["src/views", "src/public"], "dist/");
-shell.rm(["dist/views/*.ts"]);
+//Why do I need this :c I just wanted typescript in my js project...
+cp("-R", ["src/views", "src/public"], "dist/");
+rm(["dist/public/js/*.ts"]);

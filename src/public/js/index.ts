@@ -11,11 +11,11 @@ const Terminal = {
 	history: [] as string[],
 	history_p: 0,
 	init () {
-		// setInterval(function () { Terminal.print_cursor(); }, 500);
 		$.get(Terminal.file, (data: string) => {
 			Terminal.text = data.substring(0, data.length - 1);
 		});
 		$(document).on("keydown", e => {
+			$(".body").scrollTop($(".body")[0].scrollHeight);
 			if (!Terminal.working && e.which >= 32 && e.which <= 126) {
 				const c = String.fromCharCode(e.which).toLowerCase();
 				Terminal.appendBuffer(c);

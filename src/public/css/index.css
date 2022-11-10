@@ -15,14 +15,35 @@ body {
   margin: 0px;
   overflow: hidden;
 }
+.text_area {
+	bottom: 0;
+  font-family: "Ubuntu-mono", sans-ser;
+  color: var(--text-color);
+  font-weight: 400;
+	height: auto;
+	max-height: 82%;
+	width: 97%;
+	margin: 0 0 0 15px;
+	padding: 0 0 10px 0;
+	border: none;
+	background-color: transparent;
+	outline-width: 0;
+	overflow-y: auto;
+	overflow-x: hidden;
+	resize: none;
+}
 
-h1,h2,h3,a,p {
+h1,
+h2,
+h3,
+a,
+p {
   font-family: "Ubuntu-mono", sans-ser;
   color: var(--text-color);
   font-weight: 400;
 }
 
-a{
+a {
   text-decoration: none;
 }
 
@@ -34,9 +55,22 @@ a{
 }
 
 .terminal {
+    position: absolute;
+    top: 0px;
+    right: 0px;
+    display: inline-block;
+    margin: 0;
+    padding: 0;
+    width: 960px;
+    height: 878px;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: right top;
+    
+/* 
   min-width: 50vh;
   width: 50vh;
-  height: 90%;
+  height: 90%; */
 }
 
 .toolbar {
@@ -104,8 +138,8 @@ a{
   background: rgba(56, 4, 40, .9);
   height: 100%;
   overflow-wrap: break-word;
-  overflow: scroll;
-  overflow-x:auto;
+  overflow-y: auto;
+  overflow-x: auto;
   padding-left: 10px;
 }
 
@@ -150,18 +184,18 @@ a{
 ::-webkit-scrollbar {
   width: 12px;
   height: 12px;
-  }
-  
-  ::-webkit-scrollbar-track {
+}
+
+::-webkit-scrollbar-track {
   border: 1px solid yellowgreen;
   border-radius: 10px;
-  }
-  
-  ::-webkit-scrollbar-thumb {
-  background: yellowgreen;  
+}
+
+::-webkit-scrollbar-thumb {
+  background: yellowgreen;
   border-radius: 10px;
-  }
-  
-  ::-webkit-scrollbar-thumb:hover {
-  background: #88ba1c;  
-  }
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #88ba1c;
+}

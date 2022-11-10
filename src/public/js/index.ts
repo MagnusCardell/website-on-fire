@@ -15,48 +15,49 @@ const Terminal = {
 			Terminal.text = data.substring(0, data.length - 1);
 		});
 		$(document).on("keydown", e => {
-			$(".body").scrollTop($(".body")[0].scrollHeight);
-			if (!Terminal.working && e.which >= 32 && e.which <= 126) {
-				const c = String.fromCharCode(e.which).toLowerCase();
-				Terminal.appendBuffer(c);
-				e.preventDefault();
-			}
-			else if (e.keyCode === 8) { // backspace
-				Terminal.deleteBuffer(e.shiftKey, 0);
-				e.preventDefault();
-			}
-			else if (e.keyCode === 46) { // del
-				Terminal.deleteBuffer(e.shiftKey, 1);
-				e.preventDefault();
-			}
-			else if (e.keyCode === 13) { // return
+			$("span#my_text_field").trigger('focus')
+			this.scrollDown();
+			// if (!Terminal.working && e.which >= 32 && e.which <= 126) {
+			// 	const c = String.fromCharCode(e.which).toLowerCase();
+			// 	Terminal.appendBuffer(c);
+			// 	e.preventDefault();
+			// }
+			// if (e.keyCode === 8) { // backspace
+			// 	Terminal.deleteBuffer(e.shiftKey, 0);
+			// 	e.preventDefault();
+			// }
+			// else if (e.keyCode === 46) { // del
+			// 	Terminal.deleteBuffer(e.shiftKey, 1);
+			// 	e.preventDefault();
+			// }
+			if (e.keyCode === 13) { // return
 				Terminal.processBuffer();
 				e.preventDefault();
 			}
 			else if (e.keyCode === 37) { // left
-				// Terminal.bufferShift(-1);
-				e.preventDefault();
+				Terminal.bufferShift(-1);
 			}
 			else if (e.keyCode === 39) { // right
-				// Terminal.bufferRight(1);
-				e.preventDefault();
+				Terminal.bufferShift(1);
 			}
-			else if (e.keyCode === 38) { // up
-				// Terminal.shiftHistory(-1);
-				e.preventDefault();
-			}
-			else if (e.keyCode === 40) { // down
-				// Terminal.shiftHistory(1);
-				e.preventDefault();
-			}
+			// else if (e.keyCode === 38) { // up
+			// 	// Terminal.shiftHistory(-1);
+			// 	e.preventDefault();
+			// }
+			// else if (e.keyCode === 40) { // down
+			// 	// Terminal.shiftHistory(1);
+			// 	e.preventDefault();
+			// }
 		});
 	},
-
+	bufferShift(direction: number){
+		const newP = Terminal.input_p + direction;
+		Terminal.input_p = Math.max(newP, 0);
+	},
 	appendBuffer (c: string) {
-		const lh = Terminal.input.substr(0, Terminal.input_p);
-		const rh = Terminal.input.substr(Terminal.input_p, Terminal.input.length - Terminal.input_p);
+		const lh = Terminal.input.substr(0, 0);
+		const rh = Terminal.input.substr(0, Terminal.input.length - 0);
 		Terminal.input = lh + c + rh;
-		Terminal.input_p++;
 		Terminal.updateInputfield();
 	},
 	deleteBuffer (completely: boolean, pos: number) {
@@ -70,16 +71,14 @@ const Terminal = {
 		}
 	},
 	processBuffer () {
-		if (!(Terminal.input.length > 0)) {
-			return;
-		}
+		Terminal.input = $("#my_text_field").text();
 		Terminal.printOneliner(Terminal.input);
 		Terminal.history.push(Terminal.input);
 		Terminal.history_p++;
-		Terminal.input = '';
-		Terminal.input_p = 0;
-		Terminal.updateInputfield();
+		$("#my_text_field").text('');
 		Terminal.process(Terminal.input);
+		Terminal.input = '';
+		Terminal.updateInputfield();
 	},
 	printOneliner (str: string) {
 		const c = "<div class='onelin'><span class='prompt user'>" + Terminal.usr + "</span><!--" +
@@ -93,26 +92,27 @@ const Terminal = {
 			Terminal.printScript();
 		}
 		$('#output').append("Command not recognized");
+		// this.scrollDown();
 	},
 
 	updateInputfield () {
 		let left = '';
 		let pointer = ' ';
 		let right = '';
-		if (this.input_p < 0) {
-			this.input_p = 0;
+		if (Terminal.input_p < 0) {
+			Terminal.input_p = 0;
 		}
-		if (this.input_p > this.input.length) {
-			this.input_p = this.input.length;
+		if (Terminal.input_p > Terminal.input.length) {
+			Terminal.input_p = Terminal.input.length;
 		}
-		if (this.input_p > 0) {
-			left = this.input.substr(0, this.input_p);
+		if (Terminal.input_p > 0) {
+			left = Terminal.input.substr(0, Terminal.input_p);
 		}
-		if (this.input_p < this.input.length) {
-			pointer = this.input.substr(this.input_p, 1);
+		if (Terminal.input_p < Terminal.input.length) {
+			pointer = Terminal.input.substr(Terminal.input_p, 1);
 		}
-		if (this.input.length - this.input_p > 1) {
-			right = this.input.substr(this.input_p + 1, this.input.length - this.input_p - 1);
+		if (Terminal.input.length - Terminal.input_p > 1) {
+			right = Terminal.input.substr(Terminal.input_p + 1, Terminal.input.length - Terminal.input_p - 1);
 		}
 
 		$('#lh').html(left);
@@ -130,6 +130,9 @@ const Terminal = {
 	},
 	setWorking (b: boolean) {
 		this.working = b;
+	},
+	scrollDown(){
+		$(".body").scrollTop($(".body")[0].scrollHeight);
 	},
 
 	printScript () {
@@ -161,3 +164,8 @@ function terminal_function() {
 		Terminal.setWorking(false);
 	}
 }
+
+
+// $(".windows-layer > div").draggable({
+// 	containment: "parent"
+//   });

@@ -8,8 +8,11 @@ const Terminal: React.FC = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   const outputRef = useRef<HTMLDivElement>(null);
   const cursorRef = useRef<HTMLSpanElement>(null);
-  const { executeCommand, commandHistory, historyIndex, updateHistoryIndex, terminalOutput, addToOutput, commonCommands } = useTerminal();
+  const { executeCommand, commandHistory, historyIndex, updateHistoryIndex, terminalOutput, addToOutput, commonCommands, aliases } = useTerminal();
   const { currentDirectory } = useFileSystem();
+  const getPromptLine = (cmd: string) =>
+    `%F{cyan}guest%f%F{white}@%f%F{yellow}mcardell%f %F{green}${currentDirectory}%f %F{cyan}→%f ${cmd}`;
+  
 
   // Focus input on mount and when terminal is clicked
   useEffect(() => {
@@ -69,15 +72,17 @@ Last login: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()
       
       if (inputValue.trim()) {
         // Add command to output with prompt and fancy oh-my-zsh style
-        addToOutput(`%F{cyan}guest%f%F{white}@%f%F{yellow}mcardell%f %F{green}${currentDirectory}%f %F{cyan}→%f ${inputValue}`);
-        
-        // Execute the command and get result
-        const result = executeCommand(inputValue);
-        
-        // Add result to output if not null
-        if (result !== null) {
-          addToOutput(result);
-        }
+        addToOutput(getPromptLine(inputValue));
+
+        // Execute the command and get result. Handle chaining if present
+        inputValue.split(';').forEach(cmd => {
+          const command = aliases[cmd.trim().split(' ')[0]] || cmd;
+          const result = executeCommand(command.trim());
+          // Add result to output if not null
+          if (result !== null) {
+            addToOutput(result);
+          }
+        });
         
         // Clear input and suggestion
         setInputValue('');

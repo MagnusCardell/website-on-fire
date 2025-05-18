@@ -18,13 +18,6 @@ app.use((req, res, next) => {
   ) {
     return res.redirect(`https://${req.headers.host}${req.url}`);
   }
-  // Redirect www to non-www
-  if (
-    process.env.NODE_ENV === "production" &&
-    req.headers.host === "magnuscardell.com"
-  ) {
-    return res.redirect(301, `https://www.magnuscardell.com${req.url}`);
-  }
   next();
 });
 

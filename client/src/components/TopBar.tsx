@@ -24,20 +24,11 @@ const TopBar = () => {
   return (
     <div className="bg-black bg-opacity-80 h-8 flex items-center justify-between px-4 z-10">
       <div className="flex items-center space-x-4">
-        <div className="text-xl">
-          <svg 
-            xmlns="http://www.w3.org/2000/svg" 
-            className="h-5 w-5 text-ubuntu-orange" 
-            viewBox="0 0 24 24" 
-            fill="currentColor"
-          >
-            <circle cx="12" cy="12" r="10" />
-          </svg>
-        </div>
-        <span>Terminal</span>
       </div>
       <div className="flex items-center space-x-4">
         <span id="clock" className="text-sm">{time}</span>
+      </div>
+      <div className="flex items-center space-x-4">
         <span className="text-sm">
           <svg 
             xmlns="http://www.w3.org/2000/svg" 

@@ -6,7 +6,9 @@ export const useTerminal = () => {
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState<number>(0);
   const { currentDirectory, getContent, changeDirectory, listDirectory, updateFile } = useFileSystem();
-  
+  const [envVars, setEnvVars] = useState<Record<string, string>>({});
+  const [aliases, setAliases] = useState<Record<string, string>>({});
+
   // Common commands for prediction
   const commonCommands = [
     'ls', 'cat resume.txt', 'clear', 'pwd', 'cd projects', 'cd ~', 'cd docs', 
@@ -15,8 +17,11 @@ export const useTerminal = () => {
   ];
 
   // Add text to terminal output
-  const addToOutput = useCallback((text: string) => {
-    setTerminalOutput(prev => [...prev, ...(text.split('\n'))]);
+  const addToOutput = useCallback((text: string | (() => string)) => {
+    setTerminalOutput(prev => {
+      const content = typeof text === 'function' ? text() : text;
+      return [...prev, ...content.split('\n')];
+    });
   }, []);
 
   // Update command history index
@@ -70,11 +75,26 @@ export const useTerminal = () => {
       }
       
       case 'pwd': {
-        return currentDirectory === '~' ? '/home/user' : currentDirectory;
+        const home = '/home/guest';
+        const normalized = currentDirectory
+          .replace(/^~(?=\/|$)/, home)
+          .replace(/^\/~(?=\/|$)/, home); 
+        return normalized;
+      }
+      
+      case 'export': {
+        const [key, value] = args[1]?.split('=') ?? [];
+        if (key && value) {
+          setEnvVars(prev => ({ ...prev, [key]: value }));
+          return '';
+        }
+        return 'export: invalid format';
       }
       
       case 'echo': {
-        return args.slice(1).join(' ');
+        const raw = args.slice(1).join(' ');
+        const interpolated = raw.replace(/\$([A-Z_]+)/gi, (_, key) => envVars[key] || '');
+        return interpolated;
       }
       
       case 'date': {
@@ -88,18 +108,31 @@ export const useTerminal = () => {
       
       case 'help': {
         return `Available commands:
-  ls [directory]    - List directory contents
-  cd [directory]    - Change directory
-  cat [file]        - Display file contents
-  pwd               - Print working directory
-  clear             - Clear terminal
-  echo [text]       - Display text
-  date              - Display current date
-  help              - Display this help message
-  vim [file]        - Edit a file (simplified)
-  nano [file]       - Edit a file (simplified)
-  tmux              - Terminal multiplexer commands`;
+        ls [dir]            - List directory contents
+        cd [dir]            - Change directory
+        cat [file]          - Display file contents
+        pwd                 - Print working directory
+        clear               - Clear terminal
+        echo [text]         - Display text
+        date                - Show current date/time
+        whoami              - Show current user
+        tree                - Display file tree
+        vim [file]          - Edit file (simplified)
+        nano [file]         - Edit file (simplified)
+        save [file] [text]  - Save changes to a file
+        export VAR=value    - Set environment variable
+        alias name=command  - Alias support
+        tmux                - Terminal multiplexer
+        nmap [...]          - Port scanner
+      
+      Features:
+        - Command history with ↑ / ↓
+        - Command auto-completion with Tab / →
+        - Alias and variable substitution
+        - Command chaining with ;
+      `;
       }
+      
 
       case 'vim':
       case 'nano': {
@@ -140,6 +173,46 @@ export const useTerminal = () => {
         return 'tmux session active with 2 panes.';
       }
       
+      case 'whoami': {
+        return "guest@mcardell"
+      }
+
+      case 'nmap': {
+        if (commandLine === 'nmap -sS -p- localhost'){
+          return 'WARNING: You are not root'
+        } 
+        else if(commandLine ==='nmap -sT -p- localhost'){
+          return 'Ports 80 and 443 open. Good job.'
+        }
+        
+        return 'Ports are open. Figure it out. '
+      }
+
+      case 'tree': {
+        return `
+.
+├── resume.txt
+├── docs
+│   └── README.md
+└── projects
+    ├── website.md
+    └── inventory.md
+      `}
+
+      case 'sudo': {
+        return 'You have no power here.';
+      }
+
+      case 'alias': {
+        const aliasMatch = commandLine.match(/^alias (\w+)=(['"])(.+)\2$/);
+        if (aliasMatch) {
+          const [, key, , value] = aliasMatch;
+          setAliases(prev => ({ ...prev, [key]: value }));
+          return `alias ${key}='${value}'`;
+        }
+        return 'export: invalid format';
+      }
+
       default: {
         if (cmd) {
           return `${cmd}: command not found`;
@@ -153,6 +226,12 @@ export const useTerminal = () => {
     changeDirectory, 
     getContent, 
     updateFile,
+    envVars,
+    setEnvVars,
+    setCommandHistory,
+    commandHistory,
+    aliases,
+    setAliases
   ]);
 
   return {
@@ -163,5 +242,6 @@ export const useTerminal = () => {
     historyIndex,
     updateHistoryIndex,
     commonCommands,
+    aliases,
   };
 };

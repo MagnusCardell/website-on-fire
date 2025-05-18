@@ -9,71 +9,45 @@ interface FileSystem {
 const INITIAL_FILESYSTEM: FileSystem = {
   "~": {
     "resume.txt": `===========================================
-             MAGNUS CARDELL
+              MAGNUS CARDELL
 ===========================================
 
-EMAIL: cardell.magnus@gmail.com
-GITHUB: github.com/MagnusCardell
+EMAIL: cardell.magnus[at]gmail.com
 LINKEDIN: linkedin.com/in/magnuscardell
+GITHUB: github.com/MagnusCardell
 
 -------------------------------------------
-EXPERIENCE
+EXPERIENCE (Selected)
 -------------------------------------------
-NETLIGHT CONSULTING | Client: PwC | 10/2020 - Current
-Software Architect (2025-Present), Senior Consultant (2020–2024)
-• Promoted during a system reliability crisis. Led an architectural turnaround under heavy audit scrutiny
-• Developed a centralized OAuth2 BFF platform across 3 user agents, modernizing access grant flow
-• Reduced monthly production incidents from 20 to 6 (-70%) over six months on a platform serving
-  300 analysts / 1,000 users during peak audit season, while maintaining constant release cadence
-• Developed a comprehensive system health-check framework to monitor real-time dependency status
-  (DBs, queues, external APIs), improving deployment safety and MTTR
-• Automated SBOM generation and license tracking across CI/CD pipelines supporting compliance and
-  supply chain transparency with zero developer friction
-• Designed Playwright-based E2E black-box tests for critical flows, catching regressions before deploys
-• Developed a C# and JavaScript DSL with recursive parsing to enable nondevs to configure order workflows
-• Mentored 2 junior engineers, conducted 20+ senior candidate interviews to grow engineering competence
+PwC (via Netlight) – Software Architect (2025–Present)
+• Led architectural modernization effort across regulated financial systems
+• Developed a C# and JavaScript DSL with recursive parsing to enable configurable workflows
+• Mentored junior engineers and contributed to internal hiring efforts
 
-HANDELSBANKEN CAPITAL MARKETS | 06/2018 - 10/2020
-Software Engineer
-• Built and maintained a financial reports platform in .NET/C#, featuring online collaboration and automated
-  financial report distribution
-• Implemented new data integrations to enhance financial projections in a TypeScript UI, streamlining processes
-  within an API driven architecture
-• Rebuilt a legacy web application to fit an Azure cloud environment, upgrading authentication to SSO
+Netlight Consulting – Senior Consultant (2020–2024)
+• Built cloud-based systems in Azure/AWS for enterprise clients
 
-LUX SCIENCE INC. | 10/2017 - 06/2018
-Software Developer
-• Developed a web learning platform from scratch using JavaScript and PHP to connect Stripe payments and
-  DynamoDB user data. Owned delivery in early-stage startup environment
+Handelsbanken Capital Markets – Software Engineer (2018–2020)
+• Delivered .NET-based financial tools for reporting and forecasting
+
+Lux Science Inc. – Fullstack Developer (2017–2018)
+• Built an educational payments platform with Stripe, PHP, and DynamoDB
 
 -------------------------------------------
 SKILLS
 -------------------------------------------
-• Programming: C#, Python, JavaScript/TypeScript (Angular, Node.js, React)
-• Cloud: Azure, AWS, Kubernetes, Docker, Terraform, Serverless (Azure Functions, AWS Lambda)
-• Data: SQL Server, Cosmos DB, Entity Framework, NoSQL
-
--------------------------------------------
-PROJECTS
--------------------------------------------
-EMOJI-WHISPERER (2023)
-• Developed an NPM package that processes text using RAKE and TF-IDF to map keyphrases 
-  with appropriate emojis using a custom scoring model
-
-UAV NAVIGATION (2020)
-• Built a UAV path planning module in ROS, integrating sensor inputs with static maps to track targets
-• Evaluated A* and 3DVFH* in simulated embedded environments
-• Published on DiVA: urn:nbn:se:kth:diva-291229
+Languages: C#, TypeScript, Python, Bash
+Cloud: Azure, AWS, Docker, Kubernetes, Terraform
+Dev: CI/CD, OAuth2, TDD, System Design, Observability
 
 -------------------------------------------
 EDUCATION
 -------------------------------------------
-BACHELOR OF ARTS | St. Olaf College | Northfield, MN | 2014 - 2018
-• Double major in Computer Science and Music
-• Awarded the highest merit-based music scholarship after a competitive audition process`,
+St. Olaf College – BA Computer Science & Music (2014–2018)
+• Christiansen Scholarship recipient`,
     projects: {
       "website.md":
-        "# Personal Website\n\nAn interactive terminal-based resume website built with React and TypeScript.\n\nThis Ubuntu desktop simulation showcases my skills using modern frontend technologies, with a realistic terminal emulation that supports command prediction and multiple panes.",
+        "# Personal Website\n\nAn interactive terminal-based resume website built with React and Express.",
       "emoji-whisperer.md":
         "# Emoji-Whisperer (2023)\n\nAn NPM package that processes text using RAKE and TF-IDF algorithms to map keyphrases with appropriate emojis using a custom scoring model.\n\nGitHub: https://github.com/MagnusCardell/emoji-whisperer",
       "uav-navigation.md":

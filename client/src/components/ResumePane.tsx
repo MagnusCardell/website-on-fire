@@ -26,6 +26,7 @@ const TerminalWindow: React.FC<TerminalWindowProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const { activePane, togglePane, panes } = useTmux();
+  const [imageFailed, setImageFailed] = useState(false);
 
   // Setup dragging functionality
   useEffect(() => {
@@ -153,23 +154,15 @@ const TerminalWindow: React.FC<TerminalWindowProps> = ({
                   </div>
 
                     <div className="flex items-start mb-4">
-                    <img 
-                        src="https://media.licdn.com/dms/image/v2/C4E03AQF3qak-b7q4tQ/profile-displayphoto-shrink_800_800/profile-displayphoto-shrink_800_800/0/1654271233040?e=1752710400&v=beta&t=TIxeJ-HKIWEC-_EuyoSjxRC_WAcrZHWGjaJrTC3jm78" 
+                    {!imageFailed ? (
+                      <img 
+                        src="./profile-pic.jpeg" 
+                        onError={() => setImageFailed(true)}
                         alt="Magnus Cardell"
-                        className="w-16 h-16 rounded-full object-cover mr-3 border-2 border-blue-700"
-                        onError={(e) => {
-                          // Fallback to initials if image fails to load
-                          const target = e.target as HTMLImageElement;
-                          target.style.display = 'none';
-                          const parent = target.parentElement;
-                          if (parent) {
-                            const fallback = document.createElement('div');
-                            fallback.className = "w-16 h-16 rounded-full bg-blue-700 text-white flex items-center justify-center text-xl font-bold mr-3";
-                            fallback.innerText = "MC";
-                            parent.insertBefore(fallback, target);
-                          }
-                        }}
-                      />
+                        className="w-16 h-16 rounded-full object-cover mr-3 border-2 border-blue-700" />
+                    ) : (
+                      <div className="w-16 h-16 rounded-full bg-blue-700 text-white flex items-center justify-center text-xl font-bold mr-3">MC</div>
+                    )}
                       <div>
                         <h2 className="text-xl font-bold text-white">Magnus Cardell</h2>
                         <p className="text-blue-400">Software Developer @ Netlight Consulting</p>
@@ -185,11 +178,21 @@ const TerminalWindow: React.FC<TerminalWindowProps> = ({
                       <h3 className="text-white font-semibold mb-2">Experience</h3>
                       <div className="mb-3">
                         <div className="flex">
+                          <div className="w-8 h-8 rounded bg-gray-700 flex items-center justify-center mr-2">P</div>
+                          <div>
+                            <p className="text-white font-medium">PwC</p>
+                            <p className="text-gray-400 text-xs">Software Architect · 2025-Present</p>
+                            <p className="text-gray-400 text-xs">Senior Software Engineer · 2021-2024</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="mb-3">
+                        <div className="flex">
                           <div className="w-8 h-8 rounded bg-gray-700 flex items-center justify-center mr-2">N</div>
                           <div>
                             <p className="text-white font-medium">Netlight Consulting</p>
-                            <p className="text-gray-400 text-xs">Software Architect · 2025-Present</p>
-                            <p className="text-gray-400 text-xs">Senior Software Engineer · 2020-2024</p>
+                            <p className="text-gray-400 text-xs">Senior Consultant · 2023-Present</p>
+                            <p className="text-gray-400 text-xs">Consultant · 2020-2023</p>
                           </div>
                         </div>
                       </div>

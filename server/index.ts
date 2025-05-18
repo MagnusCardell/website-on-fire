@@ -9,6 +9,29 @@ const __dirname = path.dirname(__filename);
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+app.set("trust proxy", 1);
+app.use((req, res, next) => {
+  if (
+    process.env.NODE_ENV === "production" &&
+    req.headers.host !== "localhost:5000" &&
+    req.headers["x-forwarded-proto"] !== "https"
+  ) {
+    return res.redirect(`https://${req.headers.host}${req.url}`);
+  }
+  // Redirect www to non-www
+  if (
+    process.env.NODE_ENV === "production" &&
+    req.headers.host === "www.magnuscardell.com"
+  ) {
+    return res.redirect(301, `https://magnuscardell.com${req.url}`);
+  }
+  next();
+});
+
+app.use((_req, res, next) => {
+  res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
+  next();
+});
 
 (async () => {
   const server = await registerRoutes(app);

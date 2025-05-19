@@ -1,20 +1,55 @@
 import { useState, useCallback } from 'react';
 import { useFileSystem } from './useFileSystem';
 
+// Common commands for prediction
+const mockHistory = [
+    'ls', 'cat resume.txt', 'clear', 'pwd', 'cd ~', 
+    'help', 'date', 'ls -la', 'cat projects/inventory.md',
+    'tmux', 'cd ..', 'echo Hello World', 'cat docs/README.md'
+];
+
 export const useTerminal = () => {
   const [terminalOutput, setTerminalOutput] = useState<string[]>([]);
-  const [commandHistory, setCommandHistory] = useState<string[]>([]);
+  const [commandHistory, setCommandHistory] = useState<string[]>(mockHistory);
   const [historyIndex, setHistoryIndex] = useState<number>(0);
   const { currentDirectory, getContent, changeDirectory, listDirectory, updateFile } = useFileSystem();
   const [envVars, setEnvVars] = useState<Record<string, string>>({});
   const [aliases, setAliases] = useState<Record<string, string>>({});
 
-  // Common commands for prediction
-  const commonCommands = [
-    'ls', 'cat resume.txt', 'clear', 'pwd', 'cd projects', 'cd ~', 'cd docs', 
-    'help', 'date', 'ls -la', 'cat projects/website.md', 'cat projects/inventory.md',
-    'tmux', 'cd ..', 'echo Hello World', 'cat docs/README.md'
-  ];
+
+  const getSuggestions = (
+    input: string,
+    history: string[],
+    currentDirectory: string,
+    listDirectory: (path?: string) => string[]
+  ): string[] => {
+    const trimmed = input.trim();
+    const args = trimmed.split(/\s+/);
+  
+    if (args.length === 0) return [];
+  
+    const lastArg = args[args.length - 1];
+    const isSingleWord = args.length === 1;
+  
+    if (isSingleWord) {
+      return history.filter((cmd) => cmd.startsWith(lastArg));
+    }
+  
+    // If not the first arg, assume path completion
+    const base = args.slice(0, -1).join(" ");
+    const slashIndex = lastArg.lastIndexOf("/");
+    const dir = slashIndex === -1 ? "." : lastArg.slice(0, slashIndex);
+    const prefix = slashIndex === -1 ? lastArg : lastArg.slice(slashIndex + 1);
+  
+    try {
+      const contents = listDirectory(dir === "." ? currentDirectory : dir);
+      return contents
+        .filter((entry) => entry.startsWith(prefix))
+        .map((entry) => `${base} ${dir === "." ? "" : dir + "/"}${entry}`);
+    } catch {
+      return [];
+    }
+  };
 
   // Add text to terminal output
   const addToOutput = useCallback((text: string | (() => string)) => {
@@ -241,7 +276,8 @@ export const useTerminal = () => {
     commandHistory,
     historyIndex,
     updateHistoryIndex,
-    commonCommands,
     aliases,
+    listDirectory,
+    getSuggestions
   };
 };

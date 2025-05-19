@@ -8,11 +8,25 @@ const Terminal: React.FC = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   const outputRef = useRef<HTMLDivElement>(null);
   const cursorRef = useRef<HTMLSpanElement>(null);
-  const { executeCommand, commandHistory, historyIndex, updateHistoryIndex, terminalOutput, addToOutput, commonCommands, aliases } = useTerminal();
+  const { executeCommand, commandHistory, historyIndex, updateHistoryIndex, terminalOutput, addToOutput, aliases, getSuggestions, listDirectory } = useTerminal();
   const { currentDirectory } = useFileSystem();
   const getPromptLine = (cmd: string) =>
     `%F{cyan}guest%f%F{white}@%f%F{yellow}mcardell%f %F{green}${currentDirectory}%f %F{cyan}→%f ${cmd}`;
   
+  // command prediction logic w/ history + files in directory
+  useEffect(() => {
+    if (inputValue.trim()) {
+      const candidates = getSuggestions(
+        inputValue,
+        commandHistory,
+        currentDirectory,
+        listDirectory
+      );
+      setSuggestion(candidates[0] || null);
+    } else {
+      setSuggestion(null);
+    }
+  }, [inputValue, commandHistory, currentDirectory, listDirectory]);
 
   // Focus input on mount and when terminal is clicked
   useEffect(() => {
@@ -48,19 +62,19 @@ Last login: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()
         
   }, [addToOutput, terminalOutput.length]);
 
-  // Command prediction logic
-  useEffect(() => {
-    if (inputValue.trim()) {
-      const possibleCommand = commonCommands.find(cmd => cmd.startsWith(inputValue));
-      if (possibleCommand) {
-        setSuggestion(possibleCommand);
-      } else {
-        setSuggestion(null);
-      }
-    } else {
-      setSuggestion(null);
-    }
-  }, [inputValue, commonCommands]);
+  // // Command prediction logic
+  // useEffect(() => {
+  //   if (inputValue.trim()) {
+  //     const possibleCommand = commandHistory.find(cmd => cmd.startsWith(inputValue));
+  //     if (possibleCommand) {
+  //       setSuggestion(possibleCommand);
+  //     } else {
+  //       setSuggestion(null);
+  //     }
+  //   } else {
+  //     setSuggestion(null);
+  //   }
+  // }, [inputValue, commandHistory]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(e.target.value);
@@ -170,7 +184,7 @@ Last login: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()
               autoCorrect="off"
               spellCheck="false"
             />
-            {suggestion && (
+            {suggestion && suggestion !== inputValue && (
               <div className="absolute top-0 left-0 text-gray-500 pointer-events-none">
                 {inputValue}
                 <span className="text-gray-500">{suggestion.slice(inputValue.length)}</span>

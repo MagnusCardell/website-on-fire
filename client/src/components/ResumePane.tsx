@@ -181,7 +181,7 @@ const TerminalWindow: React.FC<TerminalWindowProps> = ({
                           <div className="w-8 h-8 rounded bg-gray-700 flex items-center justify-center mr-2">P</div>
                           <div>
                             <p className="text-white font-medium">PwC</p>
-                            <p className="text-gray-400 text-xs">Software Architect · 2025-Present</p>
+                            <p className="text-gray-400 text-xs">Software Architect · 2024-Present</p>
                             <p className="text-gray-400 text-xs">Senior Software Engineer · 2021-2024</p>
                           </div>
                         </div>

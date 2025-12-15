@@ -99,7 +99,7 @@ export function SolitaireApp() {
 
   return (
     
-      <div className="h-[100dvh] flex flex-col bg-gradient-to-b from-green-800 to-green-950 overflow-hidden">
+      <div className="w-[100dvw] h-[100dvh] flex flex-col bg-gradient-to-b from-green-800 to-green-950 overflow-hidden relative">
       {/* Felt texture overlay */}
       <div 
         className="absolute inset-0 pointer-events-none opacity-[0.03]"

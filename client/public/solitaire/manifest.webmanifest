@@ -1,0 +1,25 @@
+{
+  "name": "Klondike Solitaire",
+  "short_name": "Solitaire",
+  "description": "Classic Klondike Solitaire card game",
+  "start_url": "/solitaire/",
+  "scope": "/solitaire/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1a472a",
+  "theme_color": "#1a472a",
+  "icons": [
+    {
+      "src": "/solitaire/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/solitaire/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

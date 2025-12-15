@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1"
+    />
+    <title>Solitaire</title>
+
+    <!-- iOS install-like feel -->
+    <meta name="theme-color" content="#0b2f24" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Solitaire" />
+
+    <link rel="manifest" href="/solitaire/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/solitaire/icon-192.png" />
+
+    <style>
+      html, body { height: 100%; margin: 0; overscroll-behavior: none; }
+      body { background: #03150f; }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/solitaire/main.tsx"></script>
+  </body>
+</html>

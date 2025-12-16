@@ -41,6 +41,32 @@ export function Pile({
     return () => registerPile(pileId, null);
   }, [pileId]);
 
+  const readVarPx = (name: string, fallback: number) => {
+    const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    const n = Number.parseFloat(v);
+    return Number.isFinite(n) ? n : fallback;
+  };
+  const cardH = readVarPx('--sol-card-h', 84);
+  const fanUp = readVarPx('--sol-fan-up', 24);
+  const fanDown = readVarPx('--sol-fan-down', 8);
+
+  const getPileHeight = () => {
+    if (pileType === 'tableau') {
+      let h = cardH;
+      for (let i = 0; i < cards.length - 1; i++) {
+        h += cards[i].faceUp ? fanUp : fanDown;
+      }
+      return Math.max(h, cardH);
+    }
+    else if(pileType === 'foundation') {
+      return cardH;
+    }
+
+    // stock/waste: always at least one card tall
+    // small extra for stock depth effect 
+    return pileType === 'stock' ? cardH + 10 : cardH;
+  };
+
   // Calculate card positions based on pile type
   const getCardStyle = (index: number): React.CSSProperties => {
     switch (pileType) {
@@ -59,7 +85,7 @@ export function Pile({
           return { display: 'none' };
         }
         return {
-          left: displayIndex * 20,
+          left: `calc(${displayIndex} * var(--sol-waste-offset))`,
           zIndex: index,
         };
       }
@@ -72,7 +98,7 @@ export function Pile({
         // Face-down cards stacked tighter, face-up spread more
         let offset = 0;
         for (let i = 0; i < index; i++) {
-          offset += cards[i].faceUp ? 24 : 8;
+          offset += cards[i].faceUp ? fanUp : fanDown;
         }
         return {
           top: offset,
@@ -83,18 +109,6 @@ export function Pile({
         return {};
     }
   };
-
-  // Calculate pile height for tableau
-  const getPileHeight = () => {
-    if (pileType !== 'tableau') return 84;
-    
-    let height = 84; // Base card height
-    for (let i = 0; i < cards.length - 1; i++) {
-      height += cards[i].faceUp ? 24 : 8;
-    }
-    return Math.max(height, 84);
-  };
-
   const isEmpty = cards.length === 0;
 
   // For stock pile, show recycle indicator when empty
@@ -103,21 +117,21 @@ export function Pile({
       <div 
         ref={pileRef} 
         data-pile-id={pileId}
-        className="relative"
-        style={{ width: 60, height: 84 }}
+        className='relative'
+        style={{ width: 'var(--sol-card-w)', height: getPileHeight() }}
       >
-        <EmptyPile type="stock" onClick={onEmptyClick}>
+        <EmptyPile type='stock' onClick={onEmptyClick}>
           <svg 
-            className="w-6 h-6 text-gray-500" 
-            fill="none" 
-            stroke="currentColor" 
-            viewBox="0 0 24 24"
+            className='w-6 h-6 text-gray-500' 
+            fill='none' 
+            stroke='currentColor' 
+            viewBox='0 0 24 24'
           >
             <path 
-              strokeLinecap="round" 
-              strokeLinejoin="round" 
+              strokeLinecap='round' 
+              strokeLinejoin='round' 
               strokeWidth={2} 
-              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" 
+              d='M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15' 
             />
           </svg>
         </EmptyPile>
@@ -130,8 +144,8 @@ export function Pile({
       <div 
         ref={pileRef} 
         data-pile-id={pileId}
-        className="relative"
-        style={{ width: 60, height: 84 }}
+        className='relative'
+        style={{ width: 'var(--sol-card-w)', height: getPileHeight() }}
         onClick={onPileClick}
       >
         <EmptyPile 
@@ -150,10 +164,7 @@ export function Pile({
         'relative',
         isValidTarget && 'after:absolute after:inset-0 after:rounded-lg after:ring-2 after:ring-green-400 after:pointer-events-none'
       )}
-      style={{ 
-        width: pileType === 'waste' ? 60 + Math.min(2, cards.length - 1) * 20 : 60,
-        height: getPileHeight(),
-      }}
+      style={{ width: 'var(--sol-card-w)', height: getPileHeight() }}
       onClick={onPileClick}
     >
       {cards.map((card, index) => {

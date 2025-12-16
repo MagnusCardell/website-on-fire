@@ -36,6 +36,7 @@ export type MoveType =
   | 'recycle' // Recycle waste back to stock
   | 'waste-to-tableau'
   | 'waste-to-foundation'
+  | 'foundation-to-tableau'
   | 'tableau-to-tableau'
   | 'tableau-to-foundation'
   | 'flip-tableau'; // Flip top tableau card face-up

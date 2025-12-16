@@ -16,7 +16,7 @@ export function DragOverlay({ drag, cards }: DragOverlayProps) {
 
   return (
     <div
-      className="fixed pointer-events-none z-[1000]"
+      className='fixed pointer-events-none z-[1000]'
       style={{
         left: drag.startX - drag.offsetX + deltaX,
         top: drag.startY - drag.offsetY + deltaY,

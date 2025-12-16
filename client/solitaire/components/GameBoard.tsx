@@ -10,12 +10,12 @@ interface GameBoardProps {
   isSelected: (cardId: string) => boolean;
   getValidDropTargets: (cardId: string) => { pile: 'foundation' | 'tableau'; index: number }[];
   onDrawFromStock: () => void;
-  onSelectCard: (cardId: string, fromPile: 'waste' | 'tableau', fromIndex: number) => void;
+  onSelectCard: (cardId: string, fromPile: 'waste' | 'tableau' | 'foundation', fromIndex: number) => void;
   onMoveSelectionTo: (toPile: 'foundation' | 'tableau', toIndex: number) => boolean;
   onClearSelection: () => void;
   findLegalMove: (
     cardId: string,
-    fromPile: 'waste' | 'tableau',
+    fromPile: 'waste' | 'tableau' | 'foundation',
     fromIndex: number,
     toPile: 'foundation' | 'tableau',
     toIndex: number
@@ -45,7 +45,20 @@ export function GameBoard({
     return new Map(cards.map(c => [c.id, c]));
   }, [gameState]);
 
-  const handleDragStart = useCallback((cardId: string, fromPile: 'waste' | 'tableau', fromIndex: number): string[] => {
+  const boardStyle: React.CSSProperties = {
+    width: 'min(100%, calc(var(--sol-card-w) * 7 + var(--sol-gap) * 6 + var(--sol-pad-x) * 2))',
+    paddingLeft: 'var(--sol-pad-x)',
+    paddingRight: 'var(--sol-pad-x)',
+    boxSizing: 'border-box',
+  };
+  
+  const sevenColGrid: React.CSSProperties = {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(7, var(--sol-card-w))',
+    columnGap: 'var(--sol-gap)',
+  };
+  
+  const handleDragStart = useCallback((cardId: string, fromPile: 'waste' | 'tableau' | 'foundation', fromIndex: number): string[] => {
     if (fromPile === 'tableau') {
       const pile = gameState.tableau[fromIndex];
       const cardIndex = pile.findIndex(c => c.id === cardId);
@@ -74,7 +87,7 @@ export function GameBoard({
     }
   }, [findLegalMove, executeMove]);
 
-  const handleTap = useCallback((cardId: string, fromPile: 'waste' | 'tableau' | 'stock', fromIndex: number) => {
+  const handleTap = useCallback((cardId: string, fromPile: 'waste' | 'tableau' | 'stock' | 'foundation', fromIndex: number) => {
     if (fromPile === 'stock') {
       onDrawFromStock();
       return;
@@ -95,7 +108,7 @@ export function GameBoard({
   }, [allCards, isSelected, onDrawFromStock, onSelectCard, onMoveSelectionTo]);
 
   // Handle double-tap: auto-move to foundation if possible
-  const handleDoubleTap = useCallback((cardId: string, fromPile: 'waste' | 'tableau', fromIndex: number) => {
+  const handleDoubleTap = useCallback((cardId: string, fromPile: 'waste' | 'tableau' | 'foundation', fromIndex: number) => {
     const card = allCards.get(cardId);
     if (!card) return;
 
@@ -154,7 +167,7 @@ export function GameBoard({
 
   return (
     <div 
-      className="relative w-full h-full flex flex-col items-center p-2 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+      className='relative w-full h-full flex flex-col items-center py-10 pb-[env(safe-area-inset-bottom)]'
       onClick={(e) => {
         // Click on empty space clears selection
         if (e.target === e.currentTarget) {
@@ -162,71 +175,87 @@ export function GameBoard({
         }
       }}
     >
-      {/* Top row: Stock, Waste, gap, Foundations */}
-      <div className="flex justify-between w-full max-w-[460px] mb-4">
-        <div className="flex gap-3">
-          {/* Stock */}
-          <Pile
-            cards={gameState.stock}
-            pileType="stock"
-            pileIndex={0}
-            onEmptyClick={onDrawFromStock}
-            onPileClick={onDrawFromStock}
-          />
-          
-          {/* Waste */}
-          <Pile
-            cards={gameState.waste}
-            pileType="waste"
-            pileIndex={0}
-            isSelected={isSelected}
-            isDragging={isDragging}
-            onCardPointerDown={(e, cardId) => {
-              handlers.onPointerDown(e, cardId, 'waste', 0);
-            }}
-            onCardPointerMove={handlers.onPointerMove}
-            onCardPointerUp={handlers.onPointerUp}
-            onCardPointerCancel={handlers.onPointerCancel}
-          />
-        </div>
-        
-        {/* Foundations */}
-        <div className="flex gap-2">
-          {gameState.foundations.map((foundation, index) => (
+
+      {/* Top row */}
+      <div style={boardStyle} className='mb-3'>
+        <div style={sevenColGrid} className='items-start'>
+          <div style={{ gridColumn: 1 }}>
+            {/* Stock */}
             <Pile
-              key={`foundation-${index}`}
-              cards={foundation}
-              pileType="foundation"
-              pileIndex={index}
-              isValidTarget={isValidTarget('foundation', index)}
-              onPileClick={() => handleEmptyPileClick('foundation', index)}
+              cards={gameState.stock}
+              pileType='stock'
+              pileIndex={0}
+              onEmptyClick={onDrawFromStock}
+              onPileClick={onDrawFromStock}
             />
+          </div>
+
+          <div style={{ gridColumn: 2, overflow: 'visible' }}>
+            {/* Waste */}
+            <Pile
+              cards={gameState.waste}
+              pileType='waste'
+              pileIndex={0}
+              isSelected={isSelected}
+              isDragging={isDragging}
+              onCardPointerDown={(e, cardId) => {
+                handlers.onPointerDown(e, cardId, 'waste', 0);
+              }}
+              onCardPointerMove={handlers.onPointerMove}
+              onCardPointerUp={handlers.onPointerUp}
+              onCardPointerCancel={handlers.onPointerCancel}
+            />
+          </div>
+
+          {/* Column 3 intentionally blank */}
+          
+          {gameState.foundations.map((foundation, index) => (
+            <div key={index} style={{ gridColumn: 4 + index }}>
+              <Pile
+                key={`foundation-${index}`}
+                cards={foundation}
+                pileType='foundation'
+                pileIndex={index}
+                isValidTarget={isValidTarget('foundation', index)}
+                onCardPointerDown={(e, cardId) => {
+                  handlers.onPointerDown(e, cardId, 'foundation', index);
+                }}
+                onCardPointerMove={handlers.onPointerMove}
+                onCardPointerUp={handlers.onPointerUp}
+                onCardPointerCancel={handlers.onPointerCancel}
+                onPileClick={() => handleEmptyPileClick('foundation', index)}
+              />
+            </div>
           ))}
         </div>
       </div>
       
       {/* Tableau */}
-      <div className="flex justify-center gap-2 w-full max-w-[460px]">
-        {gameState.tableau.map((tableau, index) => (
-          <Pile
-            key={`tableau-${index}`}
-            cards={tableau}
-            pileType="tableau"
-            pileIndex={index}
-            isSelected={isSelected}
-            isDragging={isDragging}
-            isValidTarget={isValidTarget('tableau', index)}
-            onCardPointerDown={(e, cardId) => {
-              handlers.onPointerDown(e, cardId, 'tableau', index);
-            }}
-            onCardPointerMove={handlers.onPointerMove}
-            onCardPointerUp={handlers.onPointerUp}
-            onCardPointerCancel={handlers.onPointerCancel}
-            onPileClick={() => handleEmptyPileClick('tableau', index)}
-          />
-        ))}
+      <div style={boardStyle}>
+        <div style={sevenColGrid} className='items-start'>
+          {gameState.tableau.map((tableau, index) => (
+            <div key={index} style={{ gridColumn: 1 + index }}>
+              <Pile
+                key={`tableau-${index}`}
+                cards={tableau}
+                pileType='tableau'
+                pileIndex={index}
+                isSelected={isSelected}
+                isDragging={isDragging}
+                isValidTarget={isValidTarget('tableau', index)}
+                onCardPointerDown={(e, cardId) => {
+                  handlers.onPointerDown(e, cardId, 'tableau', index);
+                }}
+                onCardPointerMove={handlers.onPointerMove}
+                onCardPointerUp={handlers.onPointerUp}
+                onCardPointerCancel={handlers.onPointerCancel}
+                onPileClick={() => handleEmptyPileClick('tableau', index)}
+              />
+            </div>
+          ))}
+        </div>
       </div>
-      
+
       {/* Drag overlay */}
       <DragOverlay drag={drag} cards={draggedCards} />
     </div>

@@ -72,7 +72,7 @@ export function BouncingCards({ foundations, isActive }: BouncingCardsProps) {
     // Get actual foundation positions from DOM
     const foundationPositions: { x: number; y: number }[] = [];
     for (let i = 0; i < 4; i++) {
-      const pile = document.querySelector(`[data-pile-id="foundation-${i}"]`);
+      const pile = document.querySelector(`[data-pile-id='foundation-${i}']`);
       if (pile) {
         const rect = pile.getBoundingClientRect();
         foundationPositions.push({ x: rect.left, y: rect.top });
@@ -181,7 +181,7 @@ export function BouncingCards({ foundations, isActive }: BouncingCardsProps) {
       ref={canvasRef}
       width={dimensions.width}
       height={dimensions.height}
-      className="fixed inset-0 z-40 pointer-events-none"
+      className='fixed inset-0 z-40 pointer-events-none'
     />
   );
 }

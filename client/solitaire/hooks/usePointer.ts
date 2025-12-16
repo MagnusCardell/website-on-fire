@@ -2,7 +2,7 @@ import { useState, useCallback, useRef } from 'react';
 
 export interface DragState {
   cardIds: string[];
-  fromPile: 'waste' | 'tableau';
+  fromPile: 'waste' | 'tableau' | 'foundation';
   fromIndex: number;
   startX: number;
   startY: number;
@@ -13,9 +13,9 @@ export interface DragState {
 }
 
 interface UsePointerOptions {
-  onDragStart?: (cardId: string, fromPile: 'waste' | 'tableau', fromIndex: number) => string[];
+  onDragStart?: (cardId: string, fromPile: 'waste' | 'tableau' | 'foundation', fromIndex: number) => string[];
   onDragEnd?: (drag: DragState, dropTarget: { pile: 'foundation' | 'tableau'; index: number } | null) => void;
-  onTap?: (cardId: string, fromPile: 'waste' | 'tableau' | 'stock', fromIndex: number) => void;
+  onTap?: (cardId: string, fromPile: 'waste' | 'tableau' | 'stock' | 'foundation', fromIndex: number) => void;
   onDoubleTap?: (cardId: string, fromPile: 'waste' | 'tableau', fromIndex: number) => void;
   getValidDropTargets?: (cardId: string) => { pile: 'foundation' | 'tableau'; index: number }[];
 }
@@ -29,6 +29,15 @@ export function registerPile(pileId: string, element: HTMLElement | null) {
   } else {
     pileRects.delete(pileId);
   }
+}
+
+function expandRect(r: DOMRect, pad: number, padBottomExtra = 0) {
+  return new DOMRect(
+    r.left - pad,
+    r.top - pad,
+    r.width + pad * 2,
+    r.height + pad * 2 + padBottomExtra
+  );
 }
 
 export function updatePileRects() {
@@ -58,7 +67,7 @@ export function usePointer(options: UsePointerOptions) {
   const lastTapRef = useRef<{ cardId: string; time: number } | null>(null);
 
   // Hit test using card overlap instead of pointer position
-  const hitTestByOverlap = useCallback((draggedCardRect: DOMRect): { pile: 'foundation' | 'tableau'; index: number } | null => {
+  const hitTestByOverlap = useCallback((draggedCardRect: DOMRect, pointerType: 'touch' | 'mouse' | 'pen'): { pile: 'foundation' | 'tableau'; index: number } | null => {
     updatePileRects();
     
     let bestTarget: { pile: 'foundation' | 'tableau'; index: number } | null = null;
@@ -67,17 +76,23 @@ export function usePointer(options: UsePointerOptions) {
     for (const [pileId, pileRect] of pileRects.entries()) {
       const [pileType, indexStr] = pileId.split('-');
       if (pileType !== 'foundation' && pileType !== 'tableau') continue;
+
+      const pad = pointerType === 'touch' ? 18 : 10;
+      const pileRectMag =
+        bestTarget?.pile === 'tableau'
+          ? expandRect(pileRect, pad, 34)
+          : expandRect(pileRect, pad);
       
-      const overlap = getOverlapArea(draggedCardRect, pileRect);
+      const overlap = getOverlapArea(draggedCardRect, pileRectMag);
       if (overlap > maxOverlap) {
         maxOverlap = overlap;
         bestTarget = { pile: pileType as 'foundation' | 'tableau', index: parseInt(indexStr, 10) };
       }
     }
     
-    // Require minimum overlap (at least 20% of card area)
+    // Require minimum overlap (at least 5% of card area)
     const cardArea = draggedCardRect.width * draggedCardRect.height;
-    if (maxOverlap < cardArea * 0.2) {
+    if (maxOverlap < cardArea * 0.05) {
       return null;
     }
     
@@ -87,7 +102,7 @@ export function usePointer(options: UsePointerOptions) {
   const handlePointerDown = useCallback((
     e: React.PointerEvent,
     cardId: string,
-    fromPile: 'waste' | 'tableau' | 'stock',
+    fromPile: 'waste' | 'tableau' | 'stock' | 'foundation',
     fromIndex: number
   ) => {
     // Stock cards are just tapped, not dragged
@@ -178,7 +193,8 @@ export function usePointer(options: UsePointerOptions) {
       if (
         lastTapRef.current &&
         lastTapRef.current.cardId === cardId &&
-        now - lastTapRef.current.time < 400
+        now - lastTapRef.current.time < 400 &&
+        currentDrag.fromPile !== 'foundation'
       ) {
         // Double-tap detected
         lastTapRef.current = null;
@@ -206,7 +222,7 @@ export function usePointer(options: UsePointerOptions) {
           originalRect.width,
           originalRect.height
         );
-        dropTarget = hitTestByOverlap(draggedRect);
+        dropTarget = hitTestByOverlap(draggedRect, e.pointerType);
       }
       
       // Check if drop target is valid

@@ -19,3 +19,9 @@
 .animate-confetti {
   animation: confetti 3s ease-out forwards;
 }
+
+* { box-sizing: border-box; }
+
+.sol-board { transform: translateZ(0); }
+
+html, body { overscroll-behavior: none; }

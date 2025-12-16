@@ -6,7 +6,7 @@ import { saveGame, loadGame, clearGame, loadStats, recordWin, recordLoss } from 
 
 interface Selection {
   cardIds: string[];
-  fromPile: 'waste' | 'tableau';
+  fromPile: 'waste' | 'tableau' | 'foundation';
   fromIndex: number;
 }
 
@@ -119,7 +119,7 @@ export function useGame() {
   }, [gameState, executeMove]);
 
   // Select a card (for tap-to-move)
-  const selectCard = useCallback((cardId: string, fromPile: 'waste' | 'tableau', fromIndex: number) => {
+  const selectCard = useCallback((cardId: string, fromPile: 'waste' | 'tableau' | 'foundation', fromIndex: number) => {
     if (!gameState) return;
     
     // If already selected, deselect
@@ -174,7 +174,7 @@ export function useGame() {
   // Find a legal move for a card (for drag validation)
   const findLegalMove = useCallback((
     cardId: string,
-    fromPile: 'waste' | 'tableau',
+    fromPile: 'waste' | 'tableau' | 'foundation',
     fromIndex: number,
     toPile: 'foundation' | 'tableau',
     toIndex: number

@@ -2,12 +2,22 @@ import { useState, useEffect } from 'react';
 import TopBar from './TopBar';
 import Dock from './Dock';
 import TerminalWindow from './ResumePane';
+import SolitaireWindow from './SolitaireWindow';
 
 const Desktop = () => {
   const [isTerminalOpen, setIsTerminalOpen] = useState(true);
   const [isTerminalMaximized, setIsTerminalMaximized] = useState(false);
-  const [position, setPosition] = useState({ x: '5%', y: '10%' });
-  const [size, setSize] = useState({ width: '90%', height: '85%' });
+  const [isSolitaireOpen, setIsSolitaireOpen] = useState(false);
+  const [isSolitaireMaximized, setIsSolitaireMaximized] = useState(false);
+  const [terminalPosition, setTerminalPosition] = useState({ x: '5%', y: '10%' });
+  const [terminalSize, setTerminalSize] = useState({ width: '90%', height: '85%' });
+  const [solitairePosition, setSolitairePosition] = useState({ x: '5%', y: '10%' });
+  const [solitaireSize, setSolitaireSize] = useState({ width: '90%', height: '85%' });
+
+  // Toggle terminal visibility
+  const toggleSolitaire = () => {
+    setIsSolitaireOpen(!isSolitaireOpen);
+  };
 
   // Toggle terminal visibility
   const toggleTerminal = () => {
@@ -15,20 +25,36 @@ const Desktop = () => {
   };
 
   // Maximize/restore terminal window
-  const toggleMaximize = () => {
+  const toggleTerminalMaximize = () => {
     if (isTerminalMaximized) {
-      setSize({ width: '90%', height: '85%' });
-      setPosition({ x: '5%', y: '10%' });
+      setTerminalSize({ width: '90%', height: '85%' });
+      setTerminalPosition({ x: '5%', y: '10%' });
     } else {
-      setSize({ width: '100%', height: '100%' });
-      setPosition({ x: '0', y: '0' });
+      setTerminalSize({ width: '100%', height: '100%' });
+      setTerminalPosition({ x: '0', y: '0' });
     }
     setIsTerminalMaximized(!isTerminalMaximized);
   };
 
+  // Maximize/restore terminal window
+  const toggleSolitaireMaximize = () => {
+    if (isTerminalMaximized) {
+      setSolitaireSize({ width: '90%', height: '85%' });
+      setSolitairePosition({ x: '5%', y: '10%' });
+    } else {
+      setSolitaireSize({ width: '100%', height: '100%' });
+      setSolitairePosition({ x: '0', y: '0' });
+    }
+    setIsSolitaireMaximized(!isSolitaireMaximized);
+  };
+
   // Handle terminal window position update when dragging
-  const handlePositionUpdate = (x: string, y: string) => {
-    setPosition({ x, y });
+  const handleTerminalPositionUpdate = (x: string, y: string) => {
+    setTerminalPosition({ x, y });
+  };
+
+  const handleSolitairePositionUpdate = (x: string, y: string) => {
+    setSolitairePosition({ x, y });
   };
 
   // Automatically open terminal on mount
@@ -74,11 +100,33 @@ const Desktop = () => {
             isMaximized={isTerminalMaximized}
             onClose={() => setIsTerminalOpen(false)}
             onMinimize={() => setIsTerminalOpen(false)}
-            onMaximize={toggleMaximize}
-            position={position}
-            size={size}
-            onPositionUpdate={handlePositionUpdate}
+            onMaximize={toggleTerminalMaximize}
+            position={terminalPosition}
+            size={terminalSize}
+            onPositionUpdate={handleTerminalPositionUpdate}
           />
+        )}
+
+        {/* Solitaire game */}
+        <div className="absolute top-4 left-44 flex flex-col items-center cursor-pointer"
+        onClick={toggleSolitaire}>
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-1">
+            <img className="roundrect" src="./solitaire/icon-512.png" alt="Solitaire desktop icon"/>
+          </div>
+          <span className="text-xs bg-opacity-70 px-2 py-1 rounded">Solitaire</span>
+        </div>
+
+        {isSolitaireOpen && (
+          <SolitaireWindow 
+          isMaximized={isSolitaireMaximized}
+          onClose={() => setIsSolitaireOpen(false)}
+          onMinimize={() => setIsSolitaireOpen(false)}
+          onMaximize={toggleSolitaireMaximize}
+          position={solitairePosition}
+          size={solitaireSize}
+          onPositionUpdate={handleSolitairePositionUpdate}
+        />
+  
         )}
       </div>
       

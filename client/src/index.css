@@ -143,3 +143,7 @@
 .cursor-blink {
   animation: blink 1s infinite;
 }
+
+.roundrect {
+  border-radius: 15px;
+}

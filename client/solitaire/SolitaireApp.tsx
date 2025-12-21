@@ -16,6 +16,8 @@ export function SolitaireApp() {
     showWinModal,
     setShowWinModal,
     newGame,
+    startDailyChallenge,
+    isPlayingDaily,
     undo,
     drawFromStock,
     selectCard,
@@ -117,6 +119,8 @@ export function SolitaireApp() {
         onNewGame={handleNewGame}
         onShowStats={() => setShowStats(true)}
         elapsedTime={displaySeconds}
+        onStartDaily={startDailyChallenge}
+        isPlayingDaily={isPlayingDaily}
       />
       
       <main className='flex-1 relative overflow-hidden'>

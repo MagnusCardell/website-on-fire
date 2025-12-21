@@ -5,19 +5,22 @@ import { DragOverlay } from './DragOverlay';
 import { usePointer, type DragState } from '../hooks/usePointer';
 import { canPlaceOnFoundation } from '../engine/rules';
 
+type validDragFromPlaces = 'waste' | 'tableau' | 'foundation';
+type validDropCardPlaces = 'tableau' | 'foundation';
+
 interface GameBoardProps {
   gameState: GameState;
   isSelected: (cardId: string) => boolean;
-  getValidDropTargets: (cardId: string) => { pile: 'foundation' | 'tableau'; index: number }[];
+  getValidDropTargets: (cardId: string) => { pile: validDropCardPlaces; index: number }[];
   onDrawFromStock: () => void;
-  onSelectCard: (cardId: string, fromPile: 'waste' | 'tableau' | 'foundation', fromIndex: number) => void;
-  onMoveSelectionTo: (toPile: 'foundation' | 'tableau', toIndex: number) => boolean;
+  onSelectCard: (cardId: string, fromPile: validDragFromPlaces, fromIndex: number) => void;
+  onMoveSelectionTo: (toPile: validDropCardPlaces, toIndex: number) => boolean;
   onClearSelection: () => void;
   findLegalMove: (
     cardId: string,
-    fromPile: 'waste' | 'tableau' | 'foundation',
+    fromPile: validDragFromPlaces,
     fromIndex: number,
-    toPile: 'foundation' | 'tableau',
+    toPile: validDropCardPlaces,
     toIndex: number
   ) => Move | null;
   executeMove: (move: Move) => void;
@@ -58,7 +61,7 @@ export function GameBoard({
     columnGap: 'var(--sol-gap)',
   };
   
-  const handleDragStart = useCallback((cardId: string, fromPile: 'waste' | 'tableau' | 'foundation', fromIndex: number): string[] => {
+  const handleDragStart = useCallback((cardId: string, fromPile: validDragFromPlaces, fromIndex: number): string[] => {
     if (fromPile === 'tableau') {
       const pile = gameState.tableau[fromIndex];
       const cardIndex = pile.findIndex(c => c.id === cardId);
@@ -68,7 +71,7 @@ export function GameBoard({
     return [cardId];
   }, [gameState.tableau]);
 
-  const handleDragEnd = useCallback((drag: DragState, dropTarget: { pile: 'foundation' | 'tableau'; index: number } | null) => {
+  const handleDragEnd = useCallback((drag: DragState, dropTarget: { pile: validDropCardPlaces; index: number } | null) => {
     if (!dropTarget) {
       // Invalid drop - will spring back automatically
       return;
@@ -108,7 +111,7 @@ export function GameBoard({
   }, [allCards, isSelected, onDrawFromStock, onSelectCard, onMoveSelectionTo]);
 
   // Handle double-tap: auto-move to foundation if possible
-  const handleDoubleTap = useCallback((cardId: string, fromPile: 'waste' | 'tableau' | 'foundation', fromIndex: number) => {
+  const handleDoubleTap = useCallback((cardId: string, fromPile: validDragFromPlaces, fromIndex: number) => {
     const card = allCards.get(cardId);
     if (!card) return;
 
@@ -134,7 +137,7 @@ export function GameBoard({
     }
   }, [allCards, gameState.tableau, gameState.foundations, executeMove]);
 
-  const handleEmptyPileClick = useCallback((pileType: 'foundation' | 'tableau', pileIndex: number) => {
+  const handleEmptyPileClick = useCallback((pileType: validDropCardPlaces, pileIndex: number) => {
     // If something is selected, try to move it here
     const selectedCard = [...allCards.values()].find(c => isSelected(c.id));
     if (selectedCard) {
@@ -161,7 +164,7 @@ export function GameBoard({
   }, [drag, allCards]);
 
   // Check if a pile is a valid drop target
-  const isValidTarget = useCallback((pileType: 'foundation' | 'tableau', pileIndex: number) => {
+  const isValidTarget = useCallback((pileType: validDropCardPlaces, pileIndex: number) => {
     return validTargets.some(t => t.pile === pileType && t.index === pileIndex);
   }, [validTargets]);
 

@@ -35,7 +35,7 @@ export function Header({
   const [showCalendar, setShowCalendar] = useState(false);
   const [crownCount, setCrownCount] = useState(0);
   const [todayCompleted, setTodayCompleted] = useState(false);
-  const [timeColor, setTimeColor] = useState('gray');
+
   useEffect(() => {
     async function checkStatus() {
       const today = new Date;

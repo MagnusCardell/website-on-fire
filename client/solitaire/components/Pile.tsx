@@ -37,8 +37,24 @@ export function Pile({
   const pileId = `${pileType}-${pileIndex}`;
 
   useEffect(() => {
-    registerPile(pileId, pileRef.current);
-    return () => registerPile(pileId, null);
+    const el = pileRef.current;
+    if (!el) return;
+  
+    const update = () => registerPile(pileId, el);
+    update();
+  
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+  
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+  
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+      registerPile(pileId, null);
+    };
   }, [pileId]);
 
   const readVarPx = (name: string, fallback: number) => {

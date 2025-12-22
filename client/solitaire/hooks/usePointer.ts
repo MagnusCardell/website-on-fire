@@ -40,13 +40,13 @@ function expandRect(r: DOMRect, pad: number, padBottomExtra = 0) {
   );
 }
 
-export function updatePileRects() {
-  document.querySelectorAll('[data-pile-id]').forEach((el) => {
-    const pileId = el.getAttribute('data-pile-id');
-    if (pileId) {
-      pileRects.set(pileId, el.getBoundingClientRect());
-    }
-  });
+function rectCenter(r: DOMRect) {
+  return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+}
+
+function dist(a: {x:number;y:number}, b: {x:number;y:number}) {
+  const dx = a.x - b.x, dy = a.y - b.y;
+  return Math.sqrt(dx*dx + dy*dy);
 }
 
 // Calculate overlap area between two rectangles
@@ -56,6 +56,34 @@ function getOverlapArea(rect1: DOMRect, rect2: DOMRect): number {
   return xOverlap * yOverlap;
 }
 
+function readCssPx(name: string, fallback: number) {
+  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const n = Number.parseFloat(v);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function landingRectForPile(pileType: "foundation" | "tableau", pileRect: DOMRect): DOMRect {
+  const cardH = readCssPx("--sol-card-h", 84);
+  const cardW = readCssPx("--sol-card-w", 60);
+
+  if (pileType === "foundation") {
+    // Entire pile is the target
+    return new DOMRect(pileRect.left, pileRect.top, pileRect.width, pileRect.height);
+  }
+
+  // Tableau: target the bottom "slot" where a drop would land.
+  // Use card size; keep width aligned to pile column.
+  const w = Math.min(pileRect.width, cardW);
+  const x = pileRect.left + (pileRect.width - w) / 2;
+  const y = pileRect.bottom - cardH;
+
+  return new DOMRect(x, y, w, cardH);
+}
+
+function clamp(n: number, lo: number, hi: number) {
+  return Math.max(lo, Math.min(hi, n));
+}
+
 export function usePointer(options: UsePointerOptions) {
   const [drag, setDrag] = useState<DragState | null>(null);
   const [validTargets, setValidTargets] = useState<{ pile: 'foundation' | 'tableau'; index: number }[]>([]);
@@ -63,41 +91,108 @@ export function usePointer(options: UsePointerOptions) {
   const isDraggingRef = useRef(false);
   const tapStartTimeRef = useRef(0);
   const tapStartPosRef = useRef({ x: 0, y: 0 });
-  const dragElementRef = useRef<HTMLElement | null>(null);
   const lastTapRef = useRef<{ cardId: string; time: number } | null>(null);
-
+  const lastBestRef = useRef<{ target: { pile: "foundation" | "tableau"; index: number } | null; score: number }>({
+    target: null,
+    score: -Infinity,
+  });
+  
   // Hit test using card overlap instead of pointer position
-  const hitTestByOverlap = useCallback((draggedCardRect: DOMRect, pointerType: 'touch' | 'mouse' | 'pen'): { pile: 'foundation' | 'tableau'; index: number } | null => {
-    updatePileRects();
-    
-    let bestTarget: { pile: 'foundation' | 'tableau'; index: number } | null = null;
-    let maxOverlap = 0;
-    
-    for (const [pileId, pileRect] of pileRects.entries()) {
-      const [pileType, indexStr] = pileId.split('-');
-      if (pileType !== 'foundation' && pileType !== 'tableau') continue;
-
-      const pad = pointerType === 'touch' ? 18 : 10;
-      const pileRectMag =
-        bestTarget?.pile === 'tableau'
-          ? expandRect(pileRect, pad, 34)
-          : expandRect(pileRect, pad);
-      
-      const overlap = getOverlapArea(draggedCardRect, pileRectMag);
-      if (overlap > maxOverlap) {
-        maxOverlap = overlap;
-        bestTarget = { pile: pileType as 'foundation' | 'tableau', index: parseInt(indexStr, 10) };
+  const hitTestByOverlap = useCallback(
+    (
+      draggedCardRect: DOMRect,
+      pointerType: "touch" | "mouse" | "pen",
+      pointer: { x: number; y: number }, // pass current pointer coords
+      allowed?: Set<string>
+    ): { pile: "foundation" | "tableau"; index: number } | null => {
+  
+      const cardArea = draggedCardRect.width * draggedCardRect.height;
+      if (!Number.isFinite(cardArea) || cardArea <= 0) return null;
+  
+      const pad = pointerType === "touch" ? 18 : 10;
+      const cardW = readCssPx("--sol-card-w", draggedCardRect.width);
+  
+      let bestTarget: { pile: "foundation" | "tableau"; index: number } | null = null;
+      let bestScore = -Infinity;
+  
+      const draggedCenter = rectCenter(draggedCardRect);
+      const pointerPoint = pointer;
+  
+      for (const [pileId, pileRectRaw] of pileRects.entries()) {
+        const [pileTypeRaw, indexStr] = pileId.split("-");
+        if (pileTypeRaw !== "foundation" && pileTypeRaw !== "tableau") continue;
+  
+        const pileType = pileTypeRaw as "foundation" | "tableau";
+        const index = Number.parseInt(indexStr, 10);
+        if (!Number.isFinite(index)) continue;
+        if (allowed && allowed.size > 0 && !allowed.has(`${pileType}-${index}`)) continue;
+  
+        // Expand pile rect for magnetism
+        const pileRectMag =
+          pileType === "tableau"
+            ? expandRect(pileRectRaw, pad, 34)
+            : expandRect(pileRectRaw, pad);
+  
+        // Compute landing zone and expand it a bit too (finger-friendly)
+        const landing = landingRectForPile(pileType, pileRectMag);
+        const landingMag = expandRect(landing, pointerType === "touch" ? 14 : 8);
+  
+        const overlap = getOverlapArea(draggedCardRect, landingMag);
+        const overlapNorm = overlap / cardArea; // ~0..1
+  
+        // Distance from dragged card center to landing zone center
+        const landCenter = rectCenter(landingMag);
+        const dCenter = dist(draggedCenter, landCenter);
+        const distNorm = clamp(dCenter / (cardW * 1.2), 0, 1);
+  
+        // Distance from pointer to landing zone center (very important on touch)
+        const dPointer = dist(pointerPoint, landCenter);
+        const pointerNorm = clamp(dPointer / (cardW * 1.1), 0, 1);
+  
+        // Proximity is "1 - normalized distance"
+        const centerProx = 1 - distNorm;
+        const pointerProx = 1 - pointerNorm;
+  
+        // Score: overlap matters, but proximity matters more for perceived intent
+        let score =
+          overlapNorm * 0.9 +
+          centerProx * 0.65 +
+          pointerProx * 0.85;
+  
+        // Small contextual bias
+        if (pileType === "foundation") score += 0.06;
+        if (pileType === "tableau") score += 0.04;
+  
+        // Optional: discourage very far targets even with expanded rects
+        if (pointerNorm > 0.98 && overlapNorm < 0.01) score -= 0.25;
+  
+        if (score > bestScore) {
+          bestScore = score;
+          bestTarget = { pile: pileType, index };
+        }
       }
-    }
-    
-    // Require minimum overlap (at least 5% of card area)
-    const cardArea = draggedCardRect.width * draggedCardRect.height;
-    if (maxOverlap < cardArea * 0.05) {
-      return null;
-    }
-    
-    return bestTarget;
-  }, []);
+  
+      // Hysteresis: keep the previous target unless new target is clearly better
+      const prev = lastBestRef.current;
+      if (prev.target) {
+        const stickiness = pointerType === "touch" ? 0.08 : 0.05;
+        if (bestTarget && bestScore < prev.score + stickiness) {
+          return prev.target;
+        }
+      }
+  
+      // Acceptance threshold
+      const threshold = pointerType === "touch" ? 0.32 : 0.36;
+      if (bestScore < threshold) return null;
+  
+      // Save for hysteresis
+      lastBestRef.current = { target: bestTarget, score: bestScore };
+  
+      return bestTarget;
+    },
+    []
+  );
+  
 
   const handlePointerDown = useCallback((
     e: React.PointerEvent,
@@ -116,7 +211,6 @@ export function usePointer(options: UsePointerOptions) {
     
     const target = e.currentTarget as HTMLElement;
     target.setPointerCapture(e.pointerId);
-    dragElementRef.current = target;
     
     tapStartTimeRef.current = Date.now();
     tapStartPosRef.current = { x: e.clientX, y: e.clientY };
@@ -124,6 +218,11 @@ export function usePointer(options: UsePointerOptions) {
     
     // Get cards to drag
     const cardIds = options.onDragStart?.(cardId, fromPile, fromIndex) ?? [cardId];
+    if (cardIds.length === 0) {
+      dragRef.current = null;
+      setValidTargets([]);
+      return;
+    }
     
     // Get card position for offset calculation
     const rect = target.getBoundingClientRect();
@@ -139,10 +238,11 @@ export function usePointer(options: UsePointerOptions) {
       currentX: e.clientX,
       currentY: e.clientY,
       offsetX,
-      offsetY: offsetY + 20, // Offset so card is visible under finger
+      offsetY
     };
     
     dragRef.current = dragState;
+    lastBestRef.current = { target: null, score: -Infinity };
     
     // Get valid drop targets
     if (options.getValidDropTargets) {
@@ -222,7 +322,14 @@ export function usePointer(options: UsePointerOptions) {
           originalRect.width,
           originalRect.height
         );
-        dropTarget = hitTestByOverlap(draggedRect, e.pointerType);
+        const allowed = new Set(validTargets.map(t => `${t.pile}-${t.index}`));
+
+        dropTarget = hitTestByOverlap(
+          draggedRect,
+          e.pointerType as any,
+          { x: e.clientX, y: e.clientY },
+          allowed
+        );
       }
       
       // Check if drop target is valid
@@ -232,9 +339,8 @@ export function usePointer(options: UsePointerOptions) {
       
       options.onDragEnd?.(currentDrag, isValid ? dropTarget : null);
     }
-    
+    lastBestRef.current = { target: null, score: -Infinity };
     dragRef.current = null;
-    dragElementRef.current = null;
     isDraggingRef.current = false;
     setDrag(null);
     setValidTargets([]);
@@ -244,8 +350,8 @@ export function usePointer(options: UsePointerOptions) {
     if (dragRef.current) {
       options.onDragEnd?.(dragRef.current, null);
     }
+    lastBestRef.current = { target: null, score: -Infinity };
     dragRef.current = null;
-    dragElementRef.current = null;
     isDraggingRef.current = false;
     setDrag(null);
     setValidTargets([]);

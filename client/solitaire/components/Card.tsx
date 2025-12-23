@@ -218,15 +218,15 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(({
   // Dynamic type sizing via card width variable.
   // Assumes --sol-card-w is a px value (e.g. 60px, clamp(...px,...px,...px)).
   const rankStyle: React.CSSProperties = {
-    fontSize: 'clamp(12px, calc(var(--sol-card-w) * 0.28), 20px)',
+    fontSize: 'clamp(16px, calc(var(--sol-card-w) * 0.28), 20px)',
     lineHeight: 1,
   };
   const pipStyle: React.CSSProperties = {
-    fontSize: 'clamp(10px, calc(var(--sol-card-w) * 0.22), 16px)',
+    fontSize: 'clamp(14px, calc(var(--sol-card-w) * 0.22), 16px)',
     lineHeight: 1,
   };
   const centerStyle: React.CSSProperties = {
-    fontSize: 'clamp(16px, calc(var(--sol-card-w) * 0.42), 28px)',
+    fontSize: 'clamp(24px, calc(var(--sol-card-w) * 0.42), 28px)',
     lineHeight: 1,
   };
 

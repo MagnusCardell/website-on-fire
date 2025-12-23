@@ -1,4 +1,4 @@
-import React, { forwardRef } from 'react';
+import React, { forwardRef, useMemo } from 'react';
 import type { Card as CardType, Suit } from '../engine/types';
 import { cn } from '../lib/utils';
 
@@ -44,47 +44,94 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(({
   const symbol = suitSymbols[card.suit];
   const colorClass = suitColors[card.suit];
 
+  // Avoid SVG filter perf cliffs on iOS Safari.
+  const reduceEffects = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    const ua = window.navigator.userAgent || '';
+    const isIOS = /iPad|iPhone|iPod/.test(ua) || (ua.includes('Mac') && 'ontouchend' in document);
+    const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false;
+    return isIOS || prefersReducedMotion;
+  }, []);
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    // Make drag robust on iOS: keep receiving moves even if finger leaves element.
+    try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch {}
+    onPointerDown?.(e);
+  };
+  const handlePointerMove = (e: React.PointerEvent) => onPointerMove?.(e);
+  const handlePointerUp = (e: React.PointerEvent) => {
+    try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch {}
+    onPointerUp?.(e);
+  };
+  const handlePointerCancel = (e: React.PointerEvent) => {
+    try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch {}
+    onPointerCancel?.(e);
+  };
+
+  // Shared root styles (both face-up and face-down)
+  const rootClass = cn(
+    'absolute rounded-lg shadow-md select-none overflow-hidden',
+    // "touch-none" is Tailwind touch-action: none (good for drag).
+    'touch-none',
+    className,
+  );
+
+  const rootStyle: React.CSSProperties = {
+    width: 'var(--sol-card-w)',
+    height: 'var(--sol-card-h)',
+    // helps Safari composite transforms smoothly
+    transformStyle: 'preserve-3d',
+    WebkitTapHighlightColor: 'transparent',
+    WebkitUserSelect: 'none',
+    userSelect: 'none',
+    ...style,
+  };
+
   if (!card.faceUp) {
     return (
       <div
         ref={ref}
         data-card-id={card.id}
         className={cn(
-          "absolute w-[60px] h-[84px] rounded-lg shadow-md select-none touch-none overflow-hidden",
-          "bg-gradient-to-br from-amber-900 via-amber-800 to-amber-950",
-          "border-2 border-amber-700",
-          className,
+          rootClass,
+          'border-2 border-amber-700',
+          'bg-gradient-to-br from-amber-900 via-amber-800 to-amber-950',
         )}
-        style={{ ...style, transformStyle: "preserve-3d" }}
+        style={rootStyle}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerCancel}
       >
-        {/* Ornate border frame */}
-        <div className="absolute inset-[3px] rounded border border-amber-600/50" />
-        <div className="absolute inset-[6px] rounded border border-amber-500/30" />
+        <div className="pointer-events-none absolute inset-[3px] rounded border border-amber-600/50" />
+        <div className="pointer-events-none absolute inset-[6px] rounded border border-amber-500/30" />
 
         {/* Diamond lattice pattern background */}
         <div
-          className="absolute inset-[8px] rounded opacity-30"
+          className="pointer-events-none absolute inset-[8px] rounded opacity-30"
           style={{
             backgroundImage: `
               linear-gradient(45deg, transparent 40%, rgba(255,215,0,0.4) 50%, transparent 60%),
               linear-gradient(-45deg, transparent 40%, rgba(255,215,0,0.4) 50%, transparent 60%)
             `,
-            backgroundSize: "8px 8px",
+            backgroundSize: '8px 8px',
           }}
         />
-        {/* Center medallion with horse silhouette */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="relative w-11 h-12 flex items-center justify-center">
-            {/* Oval frame - transparent center */}
-            <div className="absolute inset-0 rounded-[50%] border-[1.5px] border-blue-300/80 shadow-[inset_0_0_8px_rgba(251,191,36,0.3)]" />
 
-            {/* Rearing stallion SVG silhouette */}
+        {/* Center medallion with horse */}
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <div className="relative w-8 h-10 flex items-center justify-center">
+            <div className="absolute inset-0 rounded-[50%] border-[1.5px] border-amber-300/80 shadow-[inset_0_0_8px_rgba(251,191,36,0.3)]" />
+
             <svg
-              version="1.1"
               xmlns="http://www.w3.org/2000/svg"
               viewBox="100 50 650 500"
-              className="w-8 h-10 drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]"
-              style={{ filter: 'drop-shadow(0 0 2px rgba(255,215,0,0.4))' }}
+              className={cn(
+                'w-8 h-10',
+                !reduceEffects && 'drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]'
+              )}
+              style={reduceEffects ? undefined : { filter: 'drop-shadow(0 0 2px rgba(255,215,0,0.35))' }}
+              aria-hidden="true"
             >
               <path
                 fill="#d4a017"
@@ -158,58 +205,69 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(({
         </div>
 
         {/* Corner flourishes */}
-        <div className="absolute top-1.5 left-1.5 w-2 h-2 border-t-2 border-l-2 border-amber-500/60 rounded-tl-sm" />
-        <div className="absolute top-1.5 right-1.5 w-2 h-2 border-t-2 border-r-2 border-amber-500/60 rounded-tr-sm" />
-        <div className="absolute bottom-1.5 left-1.5 w-2 h-2 border-b-2 border-l-2 border-amber-500/60 rounded-bl-sm" />
-        <div className="absolute bottom-1.5 right-1.5 w-2 h-2 border-b-2 border-r-2 border-amber-500/60 rounded-br-sm" />
+        <div className="pointer-events-none absolute top-1.5 left-1.5 w-2 h-2 border-t-2 border-l-2 border-amber-500/60 rounded-tl-sm" />
+        <div className="pointer-events-none absolute top-1.5 right-1.5 w-2 h-2 border-t-2 border-r-2 border-amber-500/60 rounded-tr-sm" />
+        <div className="pointer-events-none absolute bottom-1.5 left-1.5 w-2 h-2 border-b-2 border-l-2 border-amber-500/60 rounded-bl-sm" />
+        <div className="pointer-events-none absolute bottom-1.5 right-1.5 w-2 h-2 border-b-2 border-r-2 border-amber-500/60 rounded-br-sm" />
 
-        {/* Subtle shine */}
-        <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-transparent rounded-lg pointer-events-none" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-transparent rounded-lg" />
       </div>
     );
   }
+
+  // Dynamic type sizing via card width variable.
+  // Assumes --sol-card-w is a px value (e.g. 60px, clamp(...px,...px,...px)).
+  const rankStyle: React.CSSProperties = {
+    fontSize: 'clamp(12px, calc(var(--sol-card-w) * 0.28), 20px)',
+    lineHeight: 1,
+  };
+  const pipStyle: React.CSSProperties = {
+    fontSize: 'clamp(10px, calc(var(--sol-card-w) * 0.22), 16px)',
+    lineHeight: 1,
+  };
+  const centerStyle: React.CSSProperties = {
+    fontSize: 'clamp(16px, calc(var(--sol-card-w) * 0.42), 28px)',
+    lineHeight: 1,
+  };
 
   return (
     <div
       ref={ref}
       data-card-id={card.id}
       className={cn(
-        'absolute rounded-lg shadow-md select-none touch-none',
+        rootClass,
         'bg-white border border-gray-300',
         'transition-shadow duration-150',
         isSelected && 'ring-2 ring-amber-400 shadow-lg shadow-amber-400/30',
         isDragging && 'shadow-xl scale-105 z-50',
         isValidTarget && 'ring-2 ring-green-400',
         !isDragging && 'hover:shadow-lg',
-        className
       )}
-      style={{
-        width: 'var(--sol-card-w)', height: 'var(--sol-card-h)', ...style, transformStyle: 'preserve-3d',
-      }}
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerCancel={onPointerCancel}
+      style={rootStyle}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerCancel}
     >
       {/* Top left rank and suit */}
       <div className={cn('absolute top-0 left-1.5 leading-none', colorClass)}>
-        <div className='text-lg font-bold'>{card.rank}</div>
+        <div className="font-bold" style={rankStyle}>{card.rank}</div>
       </div>
       <div className={cn('absolute top-1 right-1 leading-none', colorClass)}>
-        <div className='text-sm'>{symbol}</div>
+        <div style={pipStyle}>{symbol}</div>
       </div>
 
       {/* Center suit */}
-      <div className={cn('absolute inset-0 flex items-center justify-center text-2xl', colorClass)}>
-        {symbol}
+      <div className={cn('absolute inset-0 flex items-center justify-center', colorClass)}>
+        <div style={centerStyle}>{symbol}</div>
       </div>
 
       {/* Bottom right rank and suit (inverted) */}
       <div className={cn('absolute bottom-0 right-1.5 leading-none rotate-180', colorClass)}>
-        <div className='text-lg font-bold'>{card.rank}</div>
+        <div className="font-bold" style={rankStyle}>{card.rank}</div>
       </div>
       <div className={cn('absolute bottom-1 left-1 leading-none rotate-180', colorClass)}>
-        <div className='text-sm'>{symbol}</div>
+        <div style={pipStyle}>{symbol}</div>
       </div>
     </div>
   );

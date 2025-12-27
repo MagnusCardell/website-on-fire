@@ -34,7 +34,7 @@ export function useGame() {
       if (savedGame && savedGame.gameStatus === 'playing') {
         setGameState(savedGame);
         const todaysSeed = getSeed(new Date());
-        if(savedGame.seed === todaysSeed){
+        if (savedGame.seed === todaysSeed) {
           setIsPlayingDaily(true);
           setActiveDailyKey(getKey(new Date()));
         }

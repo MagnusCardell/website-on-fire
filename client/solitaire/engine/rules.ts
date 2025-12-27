@@ -93,10 +93,6 @@ export function getLegalMoves(state: GameState): Move[] {
       state.tableau.forEach((toTableau, toIndex) => {
         if (fromIndex === toIndex) return;
         if (canPlaceOnTableau(leadCard, toTableau)) {
-          // Don't move a King from an empty pile to another empty pile
-          if (leadCard.rank === 'K' && cardIndex === 0 && toTableau.length === 0) {
-            return;
-          }
           moves.push({
             type: 'tableau-to-tableau',
             from: { pile: 'tableau', index: fromIndex },
@@ -224,7 +220,7 @@ export function applyMove(state: GameState, move: Move): GameState {
 
     case 'foundation-to-tableau': {
       const fromFoundationPile = newState.foundations[move.from.index];
-      const topCard = fromFoundationPile[fromFoundationPile.length-1];
+      const topCard = fromFoundationPile[fromFoundationPile.length - 1];
       newState.foundations[move.from.index].pop();
       newState.tableau[move.to.index].push(topCard);
       break;

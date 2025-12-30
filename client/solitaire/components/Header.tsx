@@ -35,17 +35,30 @@ export function Header({
   const [showCalendar, setShowCalendar] = useState(false);
   const [crownCount, setCrownCount] = useState(0);
   const [todayCompleted, setTodayCompleted] = useState(false);
+  const [currentDateKey, setCurrentDateKey] = useState(() => getKey(new Date()));
 
   useEffect(() => {
     async function checkStatus() {
-      const today = new Date;
-      const completed = await isDailyCompleted(getKey(today));
+      const today = new Date();
+      const todayKey = getKey(today);
+      const completed = await isDailyCompleted(todayKey);
       const crowns = await getCrownCount();
       setTodayCompleted(completed);
       setCrownCount(crowns);
+      setCurrentDateKey(todayKey);
     }
     checkStatus();
-  }, [isPlayingDaily]);
+
+    // Check if the date has changed (midnight crossing)
+    const interval = setInterval(() => {
+      const nowKey = getKey(new Date());
+      if (nowKey !== currentDateKey) {
+        checkStatus();
+      }
+    }, 60_000); // 1min
+
+    return () => clearInterval(interval);
+  }, [isPlayingDaily, currentDateKey]);
 
   return (
     <>

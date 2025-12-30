@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
+import { readCssPx } from '../lib/cssVars';
 
 export interface DragState {
   cardIds: string[];
@@ -54,12 +55,6 @@ function getOverlapArea(rect1: DOMRect, rect2: DOMRect): number {
   const xOverlap = Math.max(0, Math.min(rect1.right, rect2.right) - Math.max(rect1.left, rect2.left));
   const yOverlap = Math.max(0, Math.min(rect1.bottom, rect2.bottom) - Math.max(rect1.top, rect2.top));
   return xOverlap * yOverlap;
-}
-
-function readCssPx(name: string, fallback: number) {
-  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-  const n = Number.parseFloat(v);
-  return Number.isFinite(n) ? n : fallback;
 }
 
 function landingRectForPile(pileType: "foundation" | "tableau", pileRect: DOMRect): DOMRect {

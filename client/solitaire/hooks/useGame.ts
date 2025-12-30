@@ -284,7 +284,6 @@ export function useGame() {
     newGame,
     startDailyChallenge,
     isPlayingDaily,
-    dailyAlreadyCompleted,
     undo,
     drawFromStock,
     selectCard,
@@ -294,7 +293,7 @@ export function useGame() {
     executeMove,
     isSelected,
     getValidDropTargets,
-    canUndo: (gameState?.moveHistory.length ?? 0) > 0,
+    canUndo: (gameState?.moveHistory.length ?? 0) > 0 && gameState?.gameStatus !== 'won',
     updateElapsedTime,
     persistNow,
   };

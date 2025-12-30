@@ -11,7 +11,6 @@ interface WinModalProps {
   moveCount: number;
   foundations: [Card[], Card[], Card[], Card[]];
   onNewGame: () => void;
-  onClose: () => void;
 }
 
 function formatTime(seconds: number): string {
@@ -27,7 +26,6 @@ export function WinModal({
   moveCount,
   foundations,
   onNewGame,
-  onClose,
 }: WinModalProps) {
   const [showBouncing, setShowBouncing] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
@@ -52,13 +50,7 @@ export function WinModal({
   return (
 
     <div className="fixed inset-0 z-50">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0"
-        onClick={onClose}
-      />
-
-      {/* Bouncing cards above backdrop */}
+      {/* Bouncing cards */}
       <div className="absolute inset-0 z-[5] pointer-events-none">
         <BouncingCards foundations={foundations} isActive={showBouncing} />
       </div>

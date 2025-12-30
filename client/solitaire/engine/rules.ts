@@ -143,13 +143,14 @@ export function checkWin(state: GameState): boolean {
 
 // Apply a move to the game state (returns new state)
 export function applyMove(state: GameState, move: Move): GameState {
+  const moveCopy = { ...move };
   const newState: GameState = {
     ...state,
     stock: [...state.stock],
     waste: [...state.waste],
     foundations: state.foundations.map((f) => [...f]) as GameState['foundations'],
     tableau: state.tableau.map((t) => [...t]) as GameState['tableau'],
-    moveHistory: [...state.moveHistory, move],
+    moveHistory: [...state.moveHistory, moveCopy],
     moveCount: state.moveCount + 1,
   };
 
@@ -167,7 +168,7 @@ export function applyMove(state: GameState, move: Move): GameState {
 
     case 'recycle': {
       // Store previous waste state for undo BEFORE modifying
-      move.previousWasteState = state.waste.map((c) => ({ ...c }));
+      moveCopy.previousWasteState = state.waste.map((c) => ({ ...c }));
 
       // Move all waste back to stock, face down
       const wasteCards = newState.waste.splice(0);
@@ -192,37 +193,37 @@ export function applyMove(state: GameState, move: Move): GameState {
     }
 
     case 'tableau-to-tableau': {
-      const fromPile = newState.tableau[move.from.index];
-      const cardIndex = fromPile.findIndex((c) => c.id === move.cardIds[0]);
+      const fromPile = newState.tableau[moveCopy.from.index];
+      const cardIndex = fromPile.findIndex((c) => c.id === moveCopy.cardIds[0]);
       const movingCards = fromPile.splice(cardIndex);
-      newState.tableau[move.to.index].push(...movingCards);
+      newState.tableau[moveCopy.to.index].push(...movingCards);
 
       // Flip the new top card if face down
       if (fromPile.length > 0 && !fromPile[fromPile.length - 1].faceUp) {
         fromPile[fromPile.length - 1].faceUp = true;
-        move.flippedCardId = fromPile[fromPile.length - 1].id;
+        moveCopy.flippedCardId = fromPile[fromPile.length - 1].id;
       }
       break;
     }
 
     case 'tableau-to-foundation': {
-      const fromPile = newState.tableau[move.from.index];
+      const fromPile = newState.tableau[moveCopy.from.index];
       const card = fromPile.pop()!;
-      newState.foundations[move.to.index].push(card);
+      newState.foundations[moveCopy.to.index].push(card);
 
       // Flip the new top card if face down
       if (fromPile.length > 0 && !fromPile[fromPile.length - 1].faceUp) {
         fromPile[fromPile.length - 1].faceUp = true;
-        move.flippedCardId = fromPile[fromPile.length - 1].id;
+        moveCopy.flippedCardId = fromPile[fromPile.length - 1].id;
       }
       break;
     }
 
     case 'foundation-to-tableau': {
-      const fromFoundationPile = newState.foundations[move.from.index];
+      const fromFoundationPile = newState.foundations[moveCopy.from.index];
       const topCard = fromFoundationPile[fromFoundationPile.length - 1];
-      newState.foundations[move.from.index].pop();
-      newState.tableau[move.to.index].push(topCard);
+      newState.foundations[moveCopy.from.index].pop();
+      newState.tableau[moveCopy.to.index].push(topCard);
       break;
     }
   }

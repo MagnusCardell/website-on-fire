@@ -41,23 +41,27 @@ export async function openDB(): Promise<IDBDatabase> {
 }
 
 export async function saveGame(state: GameState): Promise<void> {
-  const database = await openDB();
+  try {
+    const database = await openDB();
+    return new Promise((resolve, reject) => {
+      const transaction = database.transaction([GAME_STORE], 'readwrite');
+      const store = transaction.objectStore(GAME_STORE);
 
-  return new Promise((resolve, reject) => {
-    const transaction = database.transaction([GAME_STORE], 'readwrite');
-    const store = transaction.objectStore(GAME_STORE);
+      const savedGame: SavedGame & { id: string } = {
+        id: 'current',
+        state,
+        stats: { gamesPlayed: 0, wins: 0, losses: 0, currentStreak: 0, bestStreak: 0, totalPlayTime: 0 },
+        lastSaved: Date.now(),
+      };
 
-    const savedGame: SavedGame & { id: string } = {
-      id: 'current',
-      state,
-      stats: { gamesPlayed: 0, wins: 0, losses: 0, currentStreak: 0, bestStreak: 0, totalPlayTime: 0 },
-      lastSaved: Date.now(),
-    };
-
-    const request = store.put(savedGame);
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve();
-  });
+      const request = store.put(savedGame);
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => resolve();
+    });
+  } catch (error) {
+    console.warn('Failed to save game:', error);
+    // Silently fail - game can continue without persistence
+  };
 }
 
 export async function loadGame(): Promise<GameState | null> {
@@ -81,16 +85,20 @@ export async function loadGame(): Promise<GameState | null> {
 }
 
 export async function clearGame(): Promise<void> {
-  const database = await openDB();
+  try {
+    const database = await openDB();
 
-  return new Promise((resolve, reject) => {
-    const transaction = database.transaction([GAME_STORE], 'readwrite');
-    const store = transaction.objectStore(GAME_STORE);
-    const request = store.delete('current');
+    return new Promise((resolve, reject) => {
+      const transaction = database.transaction([GAME_STORE], 'readwrite');
+      const store = transaction.objectStore(GAME_STORE);
+      const request = store.delete('current');
 
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve();
-  });
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => resolve();
+    });
+  } catch (error) {
+    console.warn('Failed to clear game:', error);
+  }
 }
 
 const DEFAULT_STATS: GameStats = {
@@ -129,16 +137,19 @@ export async function loadStats(): Promise<GameStats> {
 }
 
 export async function saveStats(stats: GameStats): Promise<void> {
-  const database = await openDB();
+  try {
+    const database = await openDB();
 
-  return new Promise((resolve, reject) => {
-    const transaction = database.transaction([STATS_STORE], 'readwrite');
-    const store = transaction.objectStore(STATS_STORE);
-
-    const request = store.put({ id: STATS_STORE, ...stats });
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve();
-  });
+    return new Promise((resolve, reject) => {
+      const transaction = database.transaction([STATS_STORE], 'readwrite');
+      const store = transaction.objectStore(STATS_STORE);
+      const request = store.put({ id: STATS_STORE, ...stats });
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => resolve();
+    });
+  } catch (error) {
+    console.warn('Failed to save stats:', error);
+  }
 }
 
 export async function recordWin(gameTime: number): Promise<GameStats> {

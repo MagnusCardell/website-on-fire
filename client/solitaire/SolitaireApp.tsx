@@ -147,7 +147,6 @@ export function SolitaireApp() {
           setShowWinModal(false);
           handleNewGame();
         }}
-        onClose={() => setShowWinModal(false)}
       />
       
       <StatsModal

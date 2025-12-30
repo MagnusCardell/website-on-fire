@@ -2,6 +2,7 @@ import React, { useRef, useEffect } from 'react';
 import type { Card as CardType } from '../engine/types';
 import { Card, EmptyPile } from './Card';
 import { registerPile } from '../hooks/usePointer';
+import { readCssPx } from '../lib/cssVars';
 import { cn } from '../lib/utils';
 
 interface PileProps {
@@ -57,14 +58,9 @@ export function Pile({
     };
   }, [pileId]);
 
-  const readVarPx = (name: string, fallback: number) => {
-    const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-    const n = Number.parseFloat(v);
-    return Number.isFinite(n) ? n : fallback;
-  };
-  const cardH = readVarPx('--sol-card-h', 84);
-  const fanUp = readVarPx('--sol-fan-up', 24);
-  const fanDown = readVarPx('--sol-fan-down', 8);
+  const cardH = readCssPx('--sol-card-h', 84);
+  const fanUp = readCssPx('--sol-fan-up', 24);
+  const fanDown = readCssPx('--sol-fan-down', 8);
 
   const getPileHeight = () => {
     if (pileType === 'tableau') {

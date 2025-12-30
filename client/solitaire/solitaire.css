@@ -25,3 +25,45 @@
 .sol-board { transform: translateZ(0); }
 
 html, body { overscroll-behavior: none; }
+
+/* Utility classes for suit colors */
+.text-sol-suit-red { color: hsl(var(--sol-suit-red)); }
+.text-sol-suit-black { color: hsl(var(--sol-suit-black)); }
+.bg-sol-card-face { background-color: hsl(var(--sol-card-face-bg)); }
+.border-sol-card-face { border-color: hsl(var(--sol-card-face-border)); }
+.fill-sol-card-back-accent { fill: hsl(var(--sol-card-back-accent)); }
+
+:root {
+  /* Card suit colors */
+  --sol-suit-red: 0 84% 60%;
+  --sol-suit-black: 0 0% 15%;
+
+  /* Card face */
+  --sol-card-face-bg: 0 0% 100%;
+  --sol-card-face-border: 0 0% 80%;
+
+  /* Card back (amber/gold theme) */
+  --sol-card-back-primary: 26 90% 20%;
+  --sol-card-back-secondary: 26 85% 25%;
+  --sol-card-back-accent: 43 85% 46%;
+  --sol-card-back-border: 26 80% 35%;
+  --sol-card-back-highlight: 43 90% 55%;
+
+  /* Empty pile styles */
+  --sol-pile-foundation-border: 142 70% 35%;
+  --sol-pile-foundation-bg: 142 70% 20%;
+  --sol-pile-tableau-border: 0 0% 40%;
+  --sol-pile-tableau-bg: 0 0% 15%;
+  --sol-pile-stock-border: 0 0% 40%;
+  --sol-pile-stock-bg: 0 0% 15%;
+
+  /* Valid target highlight */
+  --sol-valid-target: 142 70% 50%;
+
+  /* Selection highlight */
+  --sol-selection: 43 96% 56%;
+
+  /* Header colors */
+  --sol-header-bg: 142 60% 18%;
+  --sol-header-border: 142 50% 30%;
+}

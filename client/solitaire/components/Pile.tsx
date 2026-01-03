@@ -9,7 +9,6 @@ interface PileProps {
   cards: CardType[];
   pileType: 'stock' | 'waste' | 'foundation' | 'tableau';
   pileIndex: number;
-  isValidTarget?: boolean;
   isSelected?: (cardId: string) => boolean;
   isDragging?: (cardId: string) => boolean;
   onCardPointerDown?: (e: React.PointerEvent, cardId: string) => void;
@@ -24,7 +23,6 @@ export function Pile({
   cards,
   pileType,
   pileIndex,
-  isValidTarget,
   isSelected,
   isDragging,
   onCardPointerDown,
@@ -162,7 +160,6 @@ export function Pile({
       >
         <EmptyPile 
           type={pileType === 'foundation' ? 'foundation' : 'tableau'} 
-          isValidTarget={isValidTarget}
         />
       </div>
     );
@@ -174,7 +171,6 @@ export function Pile({
       data-pile-id={pileId}
       className={cn(
         'relative',
-        isValidTarget && 'after:absolute after:inset-0 after:rounded-lg after:ring-2 after:ring-green-400 after:pointer-events-none'
       )}
       style={{ width: 'var(--sol-card-w)', height: getPileHeight() }}
       onClick={onPileClick}

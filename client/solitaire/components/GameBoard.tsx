@@ -54,13 +54,13 @@ export function GameBoard({
     paddingRight: 'var(--sol-pad-x)',
     boxSizing: 'border-box',
   };
-  
+
   const sevenColGrid: React.CSSProperties = {
     display: 'grid',
     gridTemplateColumns: 'repeat(7, var(--sol-card-w))',
     columnGap: 'var(--sol-gap)',
   };
-  
+
   const handleDragStart = useCallback((cardId: string, fromPile: validDragFromPlaces, fromIndex: number): string[] => {
     if (fromPile === 'tableau') {
       const pile = gameState.tableau[fromIndex];
@@ -95,7 +95,7 @@ export function GameBoard({
       onDrawFromStock();
       return;
     }
-    
+
     // If something is selected, try to move to tapped location
     const selectedCard = [...allCards.values()].find(c => isSelected(c.id));
     if (selectedCard && !isSelected(cardId)) {
@@ -105,7 +105,7 @@ export function GameBoard({
         if (success) return;
       }
     }
-    
+
     // Otherwise, select/deselect the tapped card
     onSelectCard(cardId, fromPile, fromIndex);
   }, [allCards, isSelected, onDrawFromStock, onSelectCard, onMoveSelectionTo]);
@@ -145,7 +145,7 @@ export function GameBoard({
     }
   }, [allCards, isSelected, onMoveSelectionTo]);
 
-  const { drag, validTargets, handlers } = usePointer({
+  const { drag, handlers } = usePointer({
     onDragStart: handleDragStart,
     onDragEnd: handleDragEnd,
     onTap: handleTap,
@@ -163,13 +163,8 @@ export function GameBoard({
     return drag.cardIds.map(id => allCards.get(id)).filter(Boolean) as CardType[];
   }, [drag, allCards]);
 
-  // Check if a pile is a valid drop target
-  const isValidTarget = useCallback((pileType: validDropCardPlaces, pileIndex: number) => {
-    return validTargets.some(t => t.pile === pileType && t.index === pileIndex);
-  }, [validTargets]);
-
   return (
-    <div 
+    <div
       className='relative w-full h-full flex flex-col items-center py-10 pb-[env(safe-area-inset-bottom)]'
       onClick={(e) => {
         // Click on empty space clears selection
@@ -211,7 +206,7 @@ export function GameBoard({
           </div>
 
           {/* Column 3 intentionally blank */}
-          
+
           {gameState.foundations.map((foundation, index) => (
             <div key={index} style={{ gridColumn: 4 + index }}>
               <Pile
@@ -219,7 +214,6 @@ export function GameBoard({
                 cards={foundation}
                 pileType='foundation'
                 pileIndex={index}
-                isValidTarget={isValidTarget('foundation', index)}
                 onCardPointerDown={(e, cardId) => {
                   handlers.onPointerDown(e, cardId, 'foundation', index);
                 }}
@@ -232,7 +226,7 @@ export function GameBoard({
           ))}
         </div>
       </div>
-      
+
       {/* Tableau */}
       <div style={boardStyle}>
         <div style={sevenColGrid} className='items-start'>
@@ -245,7 +239,6 @@ export function GameBoard({
                 pileIndex={index}
                 isSelected={isSelected}
                 isDragging={isDragging}
-                isValidTarget={isValidTarget('tableau', index)}
                 onCardPointerDown={(e, cardId) => {
                   handlers.onPointerDown(e, cardId, 'tableau', index);
                 }}

@@ -55,16 +55,16 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(({
   }, []);
 
   const handlePointerDown = (e: React.PointerEvent) => {
-    try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch {}
+    try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch { }
     onPointerDown?.(e);
   };
   const handlePointerMove = (e: React.PointerEvent) => onPointerMove?.(e);
   const handlePointerUp = (e: React.PointerEvent) => {
-    try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch {}
+    try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch { }
     onPointerUp?.(e);
   };
   const handlePointerCancel = (e: React.PointerEvent) => {
-    try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch {}
+    try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch { }
     onPointerCancel?.(e);
   };
 
@@ -118,7 +118,7 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(({
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <div className="relative w-8 h-10 flex items-center justify-center">
             <div className="absolute inset-0 rounded-[50%] border-[1.5px] border-amber-300/80 shadow-[inset_0_0_8px_rgba(251,191,36,0.3)]" />
-              <HorseSilhouette reduceEffects={reduceEffects} />
+            <HorseSilhouette reduceEffects={reduceEffects} />
           </div>
         </div>
 
@@ -194,12 +194,10 @@ Card.displayName = 'Card';
 // Empty pile placeholder
 export function EmptyPile({
   type,
-  isValidTarget,
   onClick,
   children,
 }: {
   type: 'foundation' | 'tableau' | 'stock';
-  isValidTarget?: boolean;
   onClick?: () => void;
   children?: React.ReactNode;
 }) {
@@ -210,8 +208,7 @@ export function EmptyPile({
         'flex items-center justify-center',
         type === 'foundation' && 'border-green-600/40 bg-green-900/20',
         type === 'tableau' && 'border-gray-500/30 bg-gray-900/10',
-        type === 'stock' && 'border-gray-500/30 bg-gray-900/20 cursor-pointer',
-        isValidTarget && 'border-green-400 bg-green-400/20',
+        type === 'stock' && 'border-gray-500/30 bg-gray-900/20 cursor-pointer'
       )}
       style={{ width: 'var(--sol-card-w)', height: 'var(--sol-card-h)' }}
       onClick={onClick}

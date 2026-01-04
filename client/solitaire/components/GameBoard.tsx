@@ -214,6 +214,7 @@ export function GameBoard({
                 cards={foundation}
                 pileType='foundation'
                 pileIndex={index}
+                isDragging={isDragging}
                 onCardPointerDown={(e, cardId) => {
                   handlers.onPointerDown(e, cardId, 'foundation', index);
                 }}

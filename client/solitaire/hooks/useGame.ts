@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import type { GameState, GameStats, Move } from '../engine/types';
+import type { GameState, GameStats, Move, Card } from '../engine/types';
 import { createNewGame } from '../engine/game';
-import { applyMove, undoMove, getLegalMoves } from '../engine/rules';
+import { applyMove, undoMove, getLegalMoves, canAutocomplete } from '../engine/rules';
 import { saveGame, loadGame, clearGame, loadStats, recordWin, recordLoss } from '../persistence/storage';
 import { getSeed, getKey } from '../engine/solvableSeeds';
 import { recordDailyCompletion, isDailyCompleted } from '../persistence/dailyChallenge';
@@ -263,6 +263,46 @@ export function useGame() {
     });
   }, []);
 
+  // Autocomplete: animate all remaining cards to foundations.
+  // beforeApply: optional hook called with the card and a done() callback;
+  // done() commits the move. If omitted, applies immediately with a 180ms delay.
+  const autocomplete = useCallback((beforeApply?: (card: Card, foundationIndex: number, done: () => void) => void) => {
+    if (!gameState || !canAutocomplete(gameState)) return;
+    setSelection(null);
+
+    function step(state: GameState) {
+      const moves = getLegalMoves(state).filter(m => m.to.pile === 'foundation');
+      if (moves.length === 0) return;
+      const move = moves[0];
+
+      const allStateCards = [
+        ...state.stock, ...state.waste,
+        ...state.foundations.flat(), ...state.tableau.flat(),
+      ];
+      const card = allStateCards.find(c => c.id === move.cardIds[0]);
+      if (!card) return;
+
+      const apply = () => {
+        const next = applyMove(state, move);
+        setGameState(next);
+        persistGame(next);
+        if (next.gameStatus === 'won') {
+          handleWin(next, next.elapsedActiveMs);
+          return;
+        }
+        setTimeout(() => step(next), 30);
+      };
+
+      if (beforeApply) {
+        beforeApply(card, move.to.index, apply);
+      } else {
+        setTimeout(apply, 180);
+      }
+    }
+
+    step(gameState);
+  }, [gameState, persistGame, handleWin]);
+
   // Persist immediately (called on visibility change)
   const persistNow = useCallback(() => {
     if (gameState) {
@@ -294,6 +334,8 @@ export function useGame() {
     isSelected,
     getValidDropTargets,
     canUndo: (gameState?.moveHistory.length ?? 0) > 0 && gameState?.gameStatus !== 'won',
+    canAutocomplete: gameState?.gameStatus === 'playing' && canAutocomplete(gameState),
+    autocomplete,
     updateElapsedTime,
     persistNow,
   };

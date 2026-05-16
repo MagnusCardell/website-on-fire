@@ -1,11 +1,63 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useGame } from './hooks/useGame';
 import { useGameTimer } from './hooks/useGameTimer';
 import { useLayoutVars } from './hooks/useLayoutVars';
 import { GameBoard } from './components/GameBoard';
+import { Card as CardComponent } from './components/Card';
 import { Header } from './components/Header';
 import { WinModal } from './components/WinModal';
 import { StatsModal } from './components/StatsModal';
+import type { Card } from './engine/types';
+
+const AUTOCOMPLETE_ANIM_MS = 320;
+
+interface FlyCardState {
+  card: Card;
+  fromX: number;
+  fromY: number;
+  toX: number;
+  toY: number;
+}
+
+function FlyingCard({ card, fromX, fromY, toX, toY }: FlyCardState) {
+  const [phase, setPhase] = useState<'init' | 'fly'>('init');
+
+  useEffect(() => {
+    // Double rAF ensures the browser paints the start position before transitioning
+    const id = requestAnimationFrame(() => {
+      requestAnimationFrame(() => setPhase('fly'));
+    });
+    return () => cancelAnimationFrame(id);
+  }, []);
+
+  const dx = toX - fromX;
+  const dy = toY - fromY;
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        left: fromX,
+        top: fromY,
+        width: 'var(--sol-card-w)',
+        height: 'var(--sol-card-h)',
+        transform: phase === 'fly'
+          ? `translate(${dx}px, ${dy}px) scale(0.88)`
+          : 'translate(0, 0) scale(1.08)',
+        transition: phase === 'fly'
+          ? `transform ${AUTOCOMPLETE_ANIM_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`
+          : 'none',
+        zIndex: 9999,
+        pointerEvents: 'none',
+      }}
+    >
+      {/* Inner relative wrapper so Card's absolute positioning works */}
+      <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+        <CardComponent card={{ ...card, faceUp: true }} />
+      </div>
+    </div>
+  );
+}
 
 export function SolitaireApp() {
   useLayoutVars();
@@ -28,11 +80,16 @@ export function SolitaireApp() {
     isSelected,
     getValidDropTargets,
     canUndo,
+    canAutocomplete,
+    autocomplete,
     updateElapsedTime,
     persistNow,
   } = useGame();
 
   const [showStats, setShowStats] = useState(false);
+  const [flyCard, setFlyCard] = useState<FlyCardState | null>(null);
+  // Track the source element so we can restore visibility if needed
+  const flySourceRef = useRef<HTMLElement | null>(null);
 
   const { displaySeconds, displayMs } = useGameTimer({
     gameState,
@@ -48,6 +105,41 @@ export function SolitaireApp() {
     executeMove(move, displayMs);
   }, [executeMove, displayMs]);
 
+  const handleBeforeApply = useCallback((card: Card, foundationIndex: number, done: () => void) => {
+    const sourceEl = document.querySelector(`[data-card-id="${card.id}"]`) as HTMLElement | null;
+    const targetEl = document.querySelector(`[data-pile-id="foundation-${foundationIndex}"]`) as HTMLElement | null;
+
+    if (!sourceEl || !targetEl) {
+      setTimeout(done, 180);
+      return;
+    }
+
+    const fromRect = sourceEl.getBoundingClientRect();
+    const toRect = targetEl.getBoundingClientRect();
+
+    // Hide source card so only the overlay flies
+    sourceEl.style.visibility = 'hidden';
+    flySourceRef.current = sourceEl;
+
+    setFlyCard({
+      card,
+      fromX: fromRect.left,
+      fromY: fromRect.top,
+      toX: toRect.left,
+      toY: toRect.top,
+    });
+
+    setTimeout(() => {
+      setFlyCard(null);
+      flySourceRef.current = null;
+      done();
+    }, AUTOCOMPLETE_ANIM_MS);
+  }, []);
+
+  const handleAutocomplete = useCallback(() => {
+    autocomplete(handleBeforeApply);
+  }, [autocomplete, handleBeforeApply]);
+
   // Prevent overscroll/bounce on iOS
   useEffect(() => {
     const preventDefault = (e: TouchEvent) => {
@@ -60,9 +152,9 @@ export function SolitaireApp() {
     document.body.style.position = 'fixed';
     document.body.style.width = '100%';
     document.body.style.height = '100%';
-    
+
     document.addEventListener('touchmove', preventDefault, { passive: false });
-    
+
     return () => {
       document.body.style.overflow = '';
       document.body.style.position = '';
@@ -102,16 +194,15 @@ export function SolitaireApp() {
   }
 
   return (
-    
-      <div className='w-[100dvw] h-[100dvh] flex flex-col bg-gradient-to-b from-green-800 to-green-950 overflow-hidden relative'>
+    <div className='w-[100dvw] h-[100dvh] flex flex-col bg-gradient-to-b from-green-800 to-green-950 overflow-hidden relative'>
       {/* Felt texture overlay */}
-      <div 
+      <div
         className='absolute inset-0 pointer-events-none opacity-[0.03]'
         style={{
           backgroundImage: `url('data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E')`,
         }}
       />
-      
+
       <Header
         moveCount={gameState.moveCount}
         canUndo={canUndo}
@@ -122,7 +213,7 @@ export function SolitaireApp() {
         onStartDaily={startDailyChallenge}
         isPlayingDaily={isPlayingDaily}
       />
-      
+
       <main className='flex-1 relative overflow-hidden'>
         <GameBoard
           gameState={gameState}
@@ -135,8 +226,23 @@ export function SolitaireApp() {
           findLegalMove={findLegalMove}
           executeMove={handleExecuteMove}
         />
+
+        {/* Autocomplete button — floats over the board, no layout shift */}
+        {canAutocomplete && (
+          <div className='absolute top-3 left-0 right-0 flex justify-center z-10 pointer-events-none'>
+            <button
+              onClick={handleAutocomplete}
+              className='px-6 py-1.5 rounded-full bg-green-950/90 hover:bg-green-900 text-white text-sm font-medium shadow-lg pointer-events-auto transition-colors'
+            >
+              Autocomplete
+            </button>
+          </div>
+        )}
       </main>
-      
+
+      {/* Flying card overlay for autocomplete animation */}
+      {flyCard && <FlyingCard {...flyCard} />}
+
       <WinModal
         isOpen={showWinModal}
         stats={stats}
@@ -148,12 +254,12 @@ export function SolitaireApp() {
           handleNewGame();
         }}
       />
-      
+
       <StatsModal
         isOpen={showStats}
         stats={stats}
         onClose={() => setShowStats(false)}
       />
-      </div>
+    </div>
   );
 }

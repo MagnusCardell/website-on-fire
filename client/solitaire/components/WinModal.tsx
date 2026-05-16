@@ -55,7 +55,7 @@ export function WinModal({
         <BouncingCards foundations={foundations} isActive={showBouncing} />
       </div>
 
-      <div className="flex items-center justify-center">
+      <div className="absolute inset-0 flex items-center justify-center">
         {/* Dialog */}
         {showDialog && (
           <div className='relative bg-gradient-to-b from-green-800 to-green-900 rounded-2xl shadow-2xl p-6 max-w-sm w-full text-white animate-scale-in'>

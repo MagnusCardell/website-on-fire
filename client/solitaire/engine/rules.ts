@@ -236,6 +236,13 @@ export function applyMove(state: GameState, move: Move): GameState {
   return newState;
 }
 
+export function canAutocomplete(state: GameState): boolean {
+  return (
+    state.stock.length === 0 &&
+    state.tableau.every(pile => pile.every(card => card.faceUp))
+  );
+}
+
 // Undo the last move
 export function undoMove(state: GameState): GameState | null {
   if (state.moveHistory.length === 0) return null;

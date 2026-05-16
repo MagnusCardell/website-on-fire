@@ -234,6 +234,7 @@ const TerminalWindow: React.FC<TerminalWindowProps> = ({
                       <h3 className="text-white font-semibold mb-2">Skills</h3>
                       <div className="flex flex-wrap gap-2">
                         <span className="px-2 py-1 bg-gray-800 text-gray-300 text-xs rounded">C#</span>
+                        <span className="px-2 py-1 bg-gray-800 text-gray-300 text-xs rounded">Go</span>
                         <span className="px-2 py-1 bg-gray-800 text-gray-300 text-xs rounded">Python</span>
                         <span className="px-2 py-1 bg-gray-800 text-gray-300 text-xs rounded">JavaScript/TypeScript</span>
                         <span className="px-2 py-1 bg-gray-800 text-gray-300 text-xs rounded">Azure</span>

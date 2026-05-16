@@ -2,6 +2,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useTerminal } from '@/lib/useTerminal';
 import { useFileSystem } from '@/lib/useFileSystem';
 
+const escapeHtml = (s: string) =>
+  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
 const Terminal: React.FC = () => {
   const [inputValue, setInputValue] = useState('');
   const [suggestion, setSuggestion] = useState<string | null>(null);
@@ -11,7 +14,7 @@ const Terminal: React.FC = () => {
   const { executeCommand, commandHistory, historyIndex, updateHistoryIndex, terminalOutput, addToOutput, aliases, getSuggestions, listDirectory } = useTerminal();
   const { currentDirectory } = useFileSystem();
   const getPromptLine = (cmd: string) =>
-    `%F{cyan}guest%f%F{white}@%f%F{yellow}mcardell%f %F{green}${currentDirectory}%f %F{cyan}→%f ${cmd}`;
+    `%F{cyan}guest%f%F{white}@%f%F{yellow}mcardell%f %F{green}${currentDirectory}%f %F{cyan}→%f ${escapeHtml(cmd)}`;
   
   // command prediction logic w/ history + files in directory
   useEffect(() => {
@@ -61,20 +64,6 @@ Last login: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()
     }
         
   }, [addToOutput, terminalOutput.length]);
-
-  // // Command prediction logic
-  // useEffect(() => {
-  //   if (inputValue.trim()) {
-  //     const possibleCommand = commandHistory.find(cmd => cmd.startsWith(inputValue));
-  //     if (possibleCommand) {
-  //       setSuggestion(possibleCommand);
-  //     } else {
-  //       setSuggestion(null);
-  //     }
-  //   } else {
-  //     setSuggestion(null);
-  //   }
-  // }, [inputValue, commandHistory]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(e.target.value);

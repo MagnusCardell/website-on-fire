@@ -38,7 +38,7 @@ const Desktop = () => {
 
   // Maximize/restore terminal window
   const toggleSolitaireMaximize = () => {
-    if (isTerminalMaximized) {
+    if (isSolitaireMaximized) {
       setSolitaireSize({ width: '90%', height: '85%' });
       setSolitairePosition({ x: '5%', y: '10%' });
     } else {

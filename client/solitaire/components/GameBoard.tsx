@@ -103,6 +103,9 @@ export function GameBoard({
       if (fromPile === 'tableau') {
         const success = onMoveSelectionTo('tableau', fromIndex);
         if (success) return;
+      } else if (fromPile === 'foundation') {
+        const success = onMoveSelectionTo('foundation', fromIndex);
+        if (success) return;
       }
     }
 

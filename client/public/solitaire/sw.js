@@ -4,6 +4,7 @@ const SHELL_ASSETS = [
   '/solitaire/manifest.webmanifest',
   '/solitaire/icon-192.png',
   '/solitaire/icon-512.png',
+  // __PRECACHE_ASSETS__
 ];
 
 // Install event - cache shell assets

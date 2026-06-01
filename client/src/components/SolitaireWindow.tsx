@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useMemo, useState, useRef, useEffect } from 'react';
 
 interface SolitairelWindowProps {
   isMaximized: boolean;
@@ -23,6 +23,27 @@ const SolitaireWindow: React.FC<SolitairelWindowProps> = ({
   const headerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const solitaireSrc = useMemo(() => {
+    const params = new URLSearchParams({ embed: '1' });
+    const pageParams = new URLSearchParams(window.location.search);
+    let persistedDebug = false;
+
+    try {
+      persistedDebug = window.localStorage.getItem('solitaire.limitsDebug') === '1';
+    } catch {
+      persistedDebug = false;
+    }
+
+    if (
+      pageParams.get('limitsDebug') === '1' ||
+      pageParams.get('limitDebug') === '1' ||
+      persistedDebug
+    ) {
+      params.set('limitsDebug', '1');
+    }
+
+    return `/solitaire/?${params.toString()}`;
+  }, []);
 
   // Setup dragging functionality
   useEffect(() => {
@@ -117,7 +138,7 @@ const SolitaireWindow: React.FC<SolitairelWindowProps> = ({
       <div className="w-full h-full bg-black/20">
         <iframe
           title="Solitaire minigame"
-          src="/solitaire/?embed=1"
+          src={solitaireSrc}
           className="w-full h-full border-0 rounded-b-xl"
           // allow pointer/touch inside iframe
           allow="fullscreen"

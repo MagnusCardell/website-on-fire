@@ -5,11 +5,29 @@ import { useLayoutVars } from './hooks/useLayoutVars';
 import { GameBoard } from './components/GameBoard';
 import { Card as CardComponent } from './components/Card';
 import { Header } from './components/Header';
+import { LimitDebugPanel } from './components/LimitDebugPanel';
+import { LimitOverlay } from './components/LimitOverlay';
 import { WinModal } from './components/WinModal';
 import { StatsModal } from './components/StatsModal';
+import { usePlayLimiter } from './limits/usePlayLimiter';
 import type { Card } from './engine/types';
 
 const AUTOCOMPLETE_ANIM_MS = 320;
+
+function isLimitDebugEnabled(): boolean {
+  if (typeof window === 'undefined') return false;
+
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('limitsDebug') === '1' || params.get('limitDebug') === '1') {
+    return true;
+  }
+
+  try {
+    return window.localStorage.getItem('solitaire.limitsDebug') === '1';
+  } catch {
+    return false;
+  }
+}
 
 interface FlyCardState {
   card: Card;
@@ -61,6 +79,7 @@ function FlyingCard({ card, fromX, fromY, toX, toY }: FlyCardState) {
 
 export function SolitaireApp() {
   useLayoutVars();
+  const limiter = usePlayLimiter();
   const {
     gameState,
     stats,
@@ -84,10 +103,15 @@ export function SolitaireApp() {
     autocomplete,
     updateElapsedTime,
     persistNow,
-  } = useGame();
+  } = useGame({
+    limiter: limiter.controls,
+    longSessionActive: limiter.snapshot.longSessionActive,
+  });
 
   const [showStats, setShowStats] = useState(false);
+  const [showLongSessionSetup, setShowLongSessionSetup] = useState(false);
   const [flyCard, setFlyCard] = useState<FlyCardState | null>(null);
+  const [limitDebugEnabled, setLimitDebugEnabled] = useState(isLimitDebugEnabled);
   // Track the source element so we can restore visibility if needed
   const flySourceRef = useRef<HTMLElement | null>(null);
 
@@ -96,10 +120,30 @@ export function SolitaireApp() {
     onElapsedChange: updateElapsedTime,
     onPersistRequest: persistNow,
   });
+  const activeSyncMs = Math.floor(displayMs / 1000) * 1000;
 
   const handleNewGame = useCallback(() => {
     newGame(displayMs);
   }, [newGame, displayMs]);
+
+  const handleStartDailyChallenge = useCallback(() => {
+    startDailyChallenge(displayMs);
+  }, [startDailyChallenge, displayMs]);
+
+  const handleUndo = useCallback(() => {
+    undo(displayMs);
+  }, [undo, displayMs]);
+
+  const handleDrawFromStock = useCallback(() => {
+    drawFromStock(displayMs);
+  }, [drawFromStock, displayMs]);
+
+  const handleMoveSelectionTo = useCallback((
+    toPile: 'foundation' | 'tableau',
+    toIndex: number
+  ) => {
+    return moveSelectionTo(toPile, toIndex, displayMs);
+  }, [moveSelectionTo, displayMs]);
 
   const handleExecuteMove = useCallback((move: Parameters<typeof executeMove>[0]) => {
     executeMove(move, displayMs);
@@ -137,8 +181,18 @@ export function SolitaireApp() {
   }, []);
 
   const handleAutocomplete = useCallback(() => {
-    autocomplete(handleBeforeApply);
-  }, [autocomplete, handleBeforeApply]);
+    autocomplete(handleBeforeApply, displayMs);
+  }, [autocomplete, handleBeforeApply, displayMs]);
+
+  useEffect(() => {
+    if (!gameState) return;
+
+    limiter.syncActiveGame(
+      String(gameState.seed),
+      activeSyncMs,
+      isPlayingDaily ? 'daily' : 'normal'
+    );
+  }, [activeSyncMs, gameState?.seed, isPlayingDaily, limiter.syncActiveGame]);
 
   // Prevent overscroll/bounce on iOS
   useEffect(() => {
@@ -170,6 +224,31 @@ export function SolitaireApp() {
       navigator.serviceWorker.register('/solitaire/sw.js', { scope: '/solitaire/' })
         .catch(err => console.log('SW registration failed:', err));
     }
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const isDebugShortcut = event.key.toLowerCase() === 'l' && event.shiftKey && (event.metaKey || event.ctrlKey);
+      if (!isDebugShortcut) return;
+
+      event.preventDefault();
+      setLimitDebugEnabled(value => {
+        const next = !value;
+        try {
+          if (next) {
+            window.localStorage.setItem('solitaire.limitsDebug', '1');
+          } else {
+            window.localStorage.removeItem('solitaire.limitsDebug');
+          }
+        } catch {
+          // Ignore private-mode storage failures; the in-memory toggle still works.
+        }
+        return next;
+      });
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   if (isLoading) {
@@ -206,12 +285,17 @@ export function SolitaireApp() {
       <Header
         moveCount={gameState.moveCount}
         canUndo={canUndo}
-        onUndo={undo}
+        onUndo={handleUndo}
         onNewGame={handleNewGame}
         onShowStats={() => setShowStats(true)}
         elapsedTime={displaySeconds}
-        onStartDaily={startDailyChallenge}
+        onStartDaily={handleStartDailyChallenge}
         isPlayingDaily={isPlayingDaily}
+        limitStatus={{
+          label: limiter.snapshot.statusLabel,
+          tone: limiter.snapshot.statusTone,
+          onClick: () => setShowLongSessionSetup(true),
+        }}
       />
 
       <main className='flex-1 relative overflow-hidden'>
@@ -219,16 +303,16 @@ export function SolitaireApp() {
           gameState={gameState}
           isSelected={isSelected}
           getValidDropTargets={getValidDropTargets}
-          onDrawFromStock={drawFromStock}
+          onDrawFromStock={handleDrawFromStock}
           onSelectCard={selectCard}
-          onMoveSelectionTo={moveSelectionTo}
+          onMoveSelectionTo={handleMoveSelectionTo}
           onClearSelection={clearSelection}
           findLegalMove={findLegalMove}
           executeMove={handleExecuteMove}
         />
 
         {/* Autocomplete button — floats over the board, no layout shift */}
-        {canAutocomplete && (
+        {canAutocomplete && !limiter.snapshot.gate.blocksMoves && (
           <div className='absolute top-3 left-0 right-0 flex justify-center z-10 pointer-events-none'>
             <button
               onClick={handleAutocomplete}
@@ -242,6 +326,30 @@ export function SolitaireApp() {
 
       {/* Flying card overlay for autocomplete animation */}
       {flyCard && <FlyingCard {...flyCard} />}
+
+      <LimitOverlay
+        snapshot={limiter.snapshot}
+        showLongSessionSetup={showLongSessionSetup}
+        onCloseLongSessionSetup={() => setShowLongSessionSetup(false)}
+        onDismissSoftNudge={limiter.dismissSoftNudge}
+        onRemindAfterGame={limiter.remindAfterThisGame}
+        onStopAfterGame={limiter.stopAfterThisGame}
+        onStopNow={limiter.stopNow}
+        onContinueAfterBreak={limiter.continueAfterBreak}
+        onFinishCurrentGame={limiter.finishCurrentGame}
+        onContinueIntentionally={limiter.continueIntentionally}
+        onStartLongSession={limiter.startLongSession}
+        onEndLongSession={limiter.endLongSession}
+        onAcknowledgeLongSessionCheckIn={limiter.acknowledgeLongSessionCheckIn}
+      />
+
+      {limitDebugEnabled && (
+        <LimitDebugPanel
+          snapshot={limiter.snapshot}
+          onApplyScenario={limiter.applyDebugScenario}
+          onReset={limiter.resetLimitState}
+        />
+      )}
 
       <WinModal
         isOpen={showWinModal}

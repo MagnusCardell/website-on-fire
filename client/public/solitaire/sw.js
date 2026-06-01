@@ -1,4 +1,4 @@
-const CACHE_NAME = 'solitaire-v2';
+const CACHE_NAME = 'solitaire-v3';
 const SHELL_ASSETS = [
   '/solitaire/',
   '/solitaire/manifest.webmanifest',

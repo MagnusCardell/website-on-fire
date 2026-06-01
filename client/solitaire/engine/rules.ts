@@ -1,6 +1,10 @@
 import type { Card, GameState, Move } from './types';
 import { getRankValue, isOppositeColor } from './deck';
 
+function cloneCards(cards: Card[]): Card[] {
+  return cards.map(card => ({ ...card }));
+}
+
 // Check if a card can be placed on a foundation pile
 export function canPlaceOnFoundation(card: Card, foundationPile: Card[]): boolean {
   if (foundationPile.length === 0) {
@@ -146,10 +150,10 @@ export function applyMove(state: GameState, move: Move): GameState {
   const moveCopy = { ...move };
   const newState: GameState = {
     ...state,
-    stock: [...state.stock],
-    waste: [...state.waste],
-    foundations: state.foundations.map((f) => [...f]) as GameState['foundations'],
-    tableau: state.tableau.map((t) => [...t]) as GameState['tableau'],
+    stock: cloneCards(state.stock),
+    waste: cloneCards(state.waste),
+    foundations: state.foundations.map((f) => cloneCards(f)) as GameState['foundations'],
+    tableau: state.tableau.map((t) => cloneCards(t)) as GameState['tableau'],
     moveHistory: [...state.moveHistory, moveCopy],
     moveCount: state.moveCount + 1,
   };
@@ -246,10 +250,10 @@ export function canAutocomplete(state: GameState): boolean {
 
   let cursor: GameState = {
     ...state,
-    stock: [...state.stock],
-    waste: [...state.waste],
-    foundations: state.foundations.map((f) => [...f]) as GameState['foundations'],
-    tableau: state.tableau.map((t) => [...t]) as GameState['tableau'],
+    stock: cloneCards(state.stock),
+    waste: cloneCards(state.waste),
+    foundations: state.foundations.map((f) => cloneCards(f)) as GameState['foundations'],
+    tableau: state.tableau.map((t) => cloneCards(t)) as GameState['tableau'],
     moveHistory: [...state.moveHistory],
   };
   const remainingCards = cursor.stock.length + cursor.waste.length + cursor.tableau.reduce(
@@ -277,10 +281,10 @@ export function undoMove(state: GameState): GameState | null {
 
   const newState: GameState = {
     ...state,
-    stock: [...state.stock],
-    waste: [...state.waste],
-    foundations: state.foundations.map((f) => [...f]) as GameState['foundations'],
-    tableau: state.tableau.map((t) => [...t]) as GameState['tableau'],
+    stock: cloneCards(state.stock),
+    waste: cloneCards(state.waste),
+    foundations: state.foundations.map((f) => cloneCards(f)) as GameState['foundations'],
+    tableau: state.tableau.map((t) => cloneCards(t)) as GameState['tableau'],
     moveHistory: state.moveHistory.slice(0, -1),
     moveCount: state.moveCount, // Don't decrement - track total moves
     gameStatus: 'playing',

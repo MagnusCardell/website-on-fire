@@ -1,10 +1,12 @@
 import type { GameState, GameStats, SavedGame } from '../engine/types';
 
 const DB_NAME = 'solitaire-db';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const GAME_STORE = 'game';
 const STATS_STORE = 'stats';
 const DAILY_STORE = 'daily';
+const SESSIONS_STORE = 'sessions';
+const LIMIT_STATE_STORE = 'limitState';
 
 let db: IDBDatabase | null = null;
 
@@ -35,6 +37,14 @@ export async function openDB(): Promise<IDBDatabase> {
 
       if (!database.objectStoreNames.contains(DAILY_STORE)) {
         database.createObjectStore(DAILY_STORE, { keyPath: 'dateKey' });
+      }
+
+      if (!database.objectStoreNames.contains(SESSIONS_STORE)) {
+        database.createObjectStore(SESSIONS_STORE, { keyPath: 'id' });
+      }
+
+      if (!database.objectStoreNames.contains(LIMIT_STATE_STORE)) {
+        database.createObjectStore(LIMIT_STATE_STORE, { keyPath: 'id' });
       }
     };
   });

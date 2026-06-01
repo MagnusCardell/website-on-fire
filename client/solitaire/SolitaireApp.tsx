@@ -121,6 +121,7 @@ export function SolitaireApp() {
     onPersistRequest: persistNow,
   });
   const activeSyncMs = Math.floor(displayMs / 1000) * 1000;
+  const showLimitStatus = limiter.snapshot.gate.stage !== 'green' || limiter.snapshot.longSessionActive;
 
   const handleNewGame = useCallback(() => {
     newGame(displayMs);
@@ -291,11 +292,13 @@ export function SolitaireApp() {
         elapsedTime={displaySeconds}
         onStartDaily={handleStartDailyChallenge}
         isPlayingDaily={isPlayingDaily}
-        limitStatus={{
-          label: limiter.snapshot.statusLabel,
-          tone: limiter.snapshot.statusTone,
-          onClick: () => setShowLongSessionSetup(true),
-        }}
+        limitStatus={showLimitStatus
+          ? {
+              label: limiter.snapshot.statusLabel,
+              tone: limiter.snapshot.statusTone,
+              onClick: () => setShowLongSessionSetup(true),
+            }
+          : undefined}
       />
 
       <main className='flex-1 relative overflow-hidden'>

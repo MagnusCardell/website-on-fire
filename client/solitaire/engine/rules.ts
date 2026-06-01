@@ -237,10 +237,38 @@ export function applyMove(state: GameState, move: Move): GameState {
 }
 
 export function canAutocomplete(state: GameState): boolean {
-  return (
-    state.stock.length === 0 &&
-    state.tableau.every(pile => pile.every(card => card.faceUp))
+  if (
+    state.stock.length > 0 ||
+    !state.tableau.every(pile => pile.every(card => card.faceUp))
+  ) {
+    return false;
+  }
+
+  let cursor: GameState = {
+    ...state,
+    stock: [...state.stock],
+    waste: [...state.waste],
+    foundations: state.foundations.map((f) => [...f]) as GameState['foundations'],
+    tableau: state.tableau.map((t) => [...t]) as GameState['tableau'],
+    moveHistory: [...state.moveHistory],
+  };
+  const remainingCards = cursor.stock.length + cursor.waste.length + cursor.tableau.reduce(
+    (total, pile) => total + pile.length,
+    0
   );
+
+  for (let i = 0; i < remainingCards; i++) {
+    if (checkWin(cursor)) return true;
+
+    // Foundation moves are monotonic: applying one cannot make another foundation
+    // move illegal, so any available foundation move is safe to simulate.
+    const move = getLegalMoves(cursor).find(m => m.to.pile === 'foundation');
+    if (!move) return false;
+
+    cursor = applyMove(cursor, move);
+  }
+
+  return checkWin(cursor);
 }
 
 // Undo the last move

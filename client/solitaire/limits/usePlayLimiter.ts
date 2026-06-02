@@ -42,6 +42,21 @@ function clearGateDeferrals(state: PersistedLimitState): PersistedLimitState {
   };
 }
 
+function clearLockedSession(state: PersistedLimitState, now = Date.now()): PersistedLimitState {
+  return {
+    ...clearGateDeferrals(state),
+    lockUntil: undefined,
+    lockReason: undefined,
+    finishCurrentGameOnly: undefined,
+    stopAfterCurrentGame: undefined,
+    softNudgeDismissedForSessionId: undefined,
+    remindAfterCurrentGame: undefined,
+    lastSyncedGameKey: undefined,
+    lastSyncedGameActiveMs: undefined,
+    session: createPlaySession('normal', now),
+  };
+}
+
 function completeSession(session: PlaySession): PlaySession {
   return { ...session, endedAt: Date.now() };
 }
@@ -75,7 +90,12 @@ export function usePlayLimiter() {
       const persisted = await loadLimitState();
       if (cancelled) return;
 
-      setState(persisted ?? createInitialLimitState());
+      const loadNow = Date.now();
+      setState(
+        persisted?.lockUntil && persisted.lockUntil <= loadNow
+          ? clearLockedSession(persisted, loadNow)
+          : persisted ?? createInitialLimitState(loadNow)
+      );
       setIsLoaded(true);
     }
 
@@ -114,6 +134,18 @@ export function usePlayLimiter() {
   gateRef.current = gate;
 
   useEffect(() => {
+    if (!isLoaded || !state.lockUntil || state.lockUntil > now) return;
+
+    setState(prev => {
+      const resetNow = Date.now();
+      if (!prev.lockUntil || prev.lockUntil > resetNow) return prev;
+
+      saveCompletedSession(completeSession(prev.session));
+      return touch(clearLockedSession(prev, resetNow));
+    });
+  }, [isLoaded, now, state.lockUntil]);
+
+  useEffect(() => {
     if (!isLoaded) return;
 
     if (gate.stage === 'break-gate' && !state.breakReadyAt) {
@@ -127,6 +159,7 @@ export function usePlayLimiter() {
 
   useEffect(() => {
     if (!isLoaded) return;
+    if (state.lockUntil && state.lockUntil <= now) return;
 
     if (gate.stage === 'normal-lock' && gate.cooldownUntil && (!state.lockUntil || state.lockUntil < now)) {
       setState(prev => touch({

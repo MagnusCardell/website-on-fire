@@ -9,28 +9,14 @@ export type LongSessionReason =
   | 'planned-leisure'
   | 'other';
 
-export type LimitGateStage =
-  | 'green'
-  | 'soft-nudge'
-  | 'break-gate'
-  | 'intent-gate'
-  | 'normal-lock'
-  | 'daily-cap'
-  | 'long-session-checkin'
-  | 'long-session-ended';
+export type LimitGateStage = 'green';
 
 export type LimitDebugScenarioId =
   | 'green'
-  | 'soft-nudge'
-  | 'daily-complete'
-  | 'break-gate'
-  | 'break-ready'
-  | 'intent-gate'
-  | 'doom-intent'
-  | 'normal-lock'
-  | 'daily-cap'
-  | 'long-session-checkin'
-  | 'long-session-ended';
+  | 'over-time'
+  | 'over-games'
+  | 'many-restarts'
+  | 'long-session';
 
 export interface LimitDebugScenario {
   id: LimitDebugScenarioId;
@@ -39,6 +25,9 @@ export interface LimitDebugScenario {
 }
 
 export interface LimitPolicy {
+  softLimitMs: number;
+  gameCountLimit: number;
+  manyRestartsGameCount: number;
   softNudgeMs: number;
   breakGateMs: number;
   intentGateMs: number;
@@ -104,6 +93,7 @@ export interface PersistedLimitState {
   remindAfterCurrentGame?: boolean;
   lastSyncedGameKey?: string;
   lastSyncedGameActiveMs?: number;
+  longSessionUntil?: number;
   updatedAt: number;
 }
 
@@ -159,6 +149,8 @@ export interface LimitSnapshot {
   statusLabel: string;
   statusTone: 'green' | 'amber' | 'red' | 'blue';
   longSessionActive: boolean;
+  promptDue: boolean;
+  promptReason: string;
   finishCurrentGameOnly: boolean;
   stopAfterCurrentGame: boolean;
 }

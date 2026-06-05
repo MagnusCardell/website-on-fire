@@ -15,6 +15,9 @@ const HOUR = 60 * MINUTE;
 const MAX_RECENT_ACTIONS = 60;
 
 export const LIMITS: LimitPolicy = {
+  softLimitMs: 60 * MINUTE,
+  gameCountLimit: 5,
+  manyRestartsGameCount: 7,
   softNudgeMs: 20 * MINUTE,
   breakGateMs: 35 * MINUTE,
   intentGateMs: 50 * MINUTE,
@@ -29,7 +32,7 @@ export const LIMITS: LimitPolicy = {
   continueBudgetMs: 15 * MINUTE,
   shortCooldownMs: 30 * MINUTE,
   longCooldownMs: 2 * HOUR,
-  longSessionBudgetsMs: [2 * HOUR, 4 * HOUR, 8 * HOUR],
+  longSessionBudgetsMs: [2 * HOUR, 4 * HOUR, 24 * HOUR],
   longSessionCheckInMs: 45 * MINUTE,
 };
 
@@ -164,77 +167,7 @@ export function calculateDoomScore(
   session: PlaySession,
   policy: LimitPolicy = LIMITS
 ): DoomScoreResult {
-  const signals: DoomScoreResult['signals'] = [];
-  const activeMs = session.activeMs;
-  const timeSinceProgress = Math.max(0, activeMs - session.lastProgressAtActiveMs);
-  const ratio = drawRecycleRatio(session, policy);
-  const undoPingPongPairs = undoPingPongPairsLast30(session);
-
-  if (activeMs > 25 * MINUTE) {
-    signals.push({ id: 'active-25', label: '25+ min active play', points: 1 });
-  }
-
-  if (activeMs > 45 * MINUTE) {
-    signals.push({ id: 'active-45', label: '45+ min active play', points: 1 });
-  }
-
-  if (timeSinceProgress > policy.progressDroughtMs && session.movesSinceProgress > policy.progressDroughtMoves) {
-    signals.push({
-      id: 'progress-drought',
-      label: `${Math.round(timeSinceProgress / MINUTE)} min and ${session.movesSinceProgress} moves without progress`,
-      points: 2,
-    });
-  }
-
-  if (session.stockRecyclesThisGame >= policy.recycleWarningCount) {
-    signals.push({
-      id: 'recycle-churn',
-      label: `${session.stockRecyclesThisGame} stock cycles this game`,
-      points: 1,
-    });
-  }
-
-  if (
-    session.recentMoveTypes.length >= Math.min(10, policy.drawRecycleRatioWindow) &&
-    ratio > policy.drawRecycleRatioLimit
-  ) {
-    signals.push({
-      id: 'draw-recycle-ratio',
-      label: `${Math.round(ratio * 100)}% draw/recycle moves recently`,
-      points: 1,
-    });
-  }
-
-  if (session.abandonedGames >= 2) {
-    signals.push({ id: 'abandoned-games', label: `${session.abandonedGames} abandoned games`, points: 1 });
-  }
-
-  if (session.losses >= 3) {
-    signals.push({ id: 'losses', label: `${session.losses} losses this session`, points: 1 });
-  }
-
-  if (undoPingPongPairs >= 5) {
-    signals.push({ id: 'undo-ping-pong', label: `${undoPingPongPairs} undo loops recently`, points: 1 });
-  }
-
-  if (session.overrides >= 2) {
-    signals.push({ id: 'override-chain', label: `${session.overrides} limit overrides`, points: 2 });
-  }
-
-  if (session.wonGameThisSession) {
-    signals.push({ id: 'won-game', label: 'win this session', points: -1 });
-  }
-
-  if (session.mode === 'daily' || session.dailyCompletedThisSession) {
-    signals.push({ id: 'daily', label: 'daily challenge context', points: -1 });
-  }
-
-  if (session.mode === 'long-session') {
-    signals.push({ id: 'long-session', label: 'long session pass active', points: -4 });
-  }
-
-  const score = Math.max(0, signals.reduce((total, signal) => total + signal.points, 0));
-  return { score, signals };
+  return { score: 0, signals: [] };
 }
 
 function activeMinutes(ms: number): number {
@@ -256,134 +189,6 @@ export function evaluateLimitState(
 ): LimitGate {
   const session = state.session;
   const activeMs = session.activeMs;
-  const dailyNormalActiveMs = state.dailyNormalActiveMsByDate[todayKey] ?? 0;
-  const doom = calculateDoomScore(session, policy);
-  const reasons = doom.signals.filter(signal => signal.points > 0).map(signal => signal.label);
-
-  if (session.mode === 'long-session') {
-    const passElapsed = activeMs - (session.longSessionStartedAtActiveMs ?? 0);
-    const budgetMs = session.longSessionBudgetMs ?? policy.longSessionBudgetsMs[0];
-    const lastCheckIn = session.longSessionLastCheckInAtActiveMs ?? 0;
-
-    if (passElapsed >= budgetMs) {
-      return gate('long-session-ended', {
-        blocksMoves: true,
-        blocksNewGames: true,
-        title: 'Long session budget reached',
-        message: 'The selected long-session budget is complete.',
-        reasons: [`${activeMinutes(passElapsed)} min used from this pass`],
-        doomScore: doom.score,
-      });
-    }
-
-    if (activeMs - lastCheckIn >= policy.longSessionCheckInMs) {
-      return gate('long-session-checkin', {
-        blocksMoves: true,
-        blocksNewGames: true,
-        title: 'Long session check-in',
-        message: 'You chose a long session. Check that this still matches your plan.',
-        reasons: [`${activeMinutes(passElapsed)} min used from this pass`],
-        doomScore: doom.score,
-      });
-    }
-
-    return gate('green', {
-      blocksMoves: false,
-      blocksNewGames: false,
-      title: 'Long session active',
-      message: 'Long session pass is active.',
-      reasons: [],
-      doomScore: doom.score,
-    });
-  }
-
-  if (state.lockUntil && state.lockUntil > now) {
-    return gate('normal-lock', {
-      blocksMoves: true,
-      blocksNewGames: true,
-      title: 'Normal play is paused',
-      message: 'Your current game is saved and normal play can resume after the cooldown.',
-      reasons: state.lockReason ? [state.lockReason] : reasons,
-      doomScore: doom.score,
-      cooldownUntil: state.lockUntil,
-    });
-  }
-
-  if (dailyNormalActiveMs >= policy.normalDailyCapMs) {
-    return gate('daily-cap', {
-      blocksMoves: true,
-      blocksNewGames: true,
-      title: 'Daily normal-mode cap reached',
-      message: 'Normal mode is unavailable until tomorrow unless you start a long session pass.',
-      reasons: [`${activeMinutes(dailyNormalActiveMs)} min normal-mode play today`],
-      doomScore: doom.score,
-    });
-  }
-
-  const hardLockReason = activeMs >= policy.normalHardCapMs
-    ? `${activeMinutes(activeMs)} min active play`
-    : doom.score >= 5
-      ? reasons.join(', ') || `doom score ${doom.score}`
-      : session.overrides >= 3
-        ? `${session.overrides} intent overrides`
-        : '';
-
-  if (hardLockReason) {
-    return gate('normal-lock', {
-      blocksMoves: true,
-      blocksNewGames: true,
-      title: 'Normal play is paused',
-      message: 'Your game is saved. Take a cooldown before normal play resumes.',
-      reasons: [hardLockReason],
-      doomScore: doom.score,
-      cooldownUntil: now + policy.shortCooldownMs,
-    });
-  }
-
-  const intentSnoozed = state.intentSnoozedUntilActiveMs !== undefined && activeMs < state.intentSnoozedUntilActiveMs;
-  if (!intentSnoozed && (activeMs >= policy.intentGateMs || doom.score >= 3)) {
-    return gate('intent-gate', {
-      blocksMoves: true,
-      blocksNewGames: true,
-      title: 'Continue intentionally?',
-      message: 'This looks like loop play. Choose how you want to proceed.',
-      reasons: reasons.length > 0 ? reasons : [`${activeMinutes(activeMs)} min active play`],
-      doomScore: doom.score,
-    });
-  }
-
-  const breakSnoozed = state.breakSnoozedUntilActiveMs !== undefined && activeMs < state.breakSnoozedUntilActiveMs;
-  const churnGames = session.abandonedGames + session.losses;
-  if (!breakSnoozed && (activeMs >= policy.breakGateMs || session.gamesStarted >= 2 || churnGames >= 2)) {
-    return gate('break-gate', {
-      blocksMoves: true,
-      blocksNewGames: true,
-      title: 'Break checkpoint',
-      message: 'You can continue, but first look away for a short pause.',
-      reasons: [
-        activeMs >= policy.breakGateMs ? `${activeMinutes(activeMs)} min active play` : '',
-        session.gamesStarted >= 2 ? `${session.gamesStarted} games started` : '',
-        churnGames >= 2 ? `${churnGames} abandoned or lost games` : '',
-      ].filter(Boolean),
-      doomScore: doom.score,
-      countdownUntil: state.breakReadyAt,
-    });
-  }
-
-  const softNudgeDismissed = state.softNudgeDismissedForSessionId === session.id;
-  if (!softNudgeDismissed && (activeMs >= policy.softNudgeMs || session.dailyCompletedThisSession)) {
-    return gate('soft-nudge', {
-      blocksMoves: false,
-      blocksNewGames: false,
-      title: 'Good stopping point soon',
-      message: 'Finish this game, then take a break?',
-      reasons: [
-        activeMs >= policy.softNudgeMs ? `${activeMinutes(activeMs)} min active play` : '',
-        session.dailyCompletedThisSession ? 'today\'s daily completed' : '',
-      ].filter(Boolean),
-      doomScore: doom.score,
-    });
-  }
 
   return gate('green', {
     blocksMoves: false,
@@ -391,7 +196,7 @@ export function evaluateLimitState(
     title: 'Within normal limits',
     message: 'No limiter action needed.',
     reasons: [],
-    doomScore: doom.score,
+    doomScore: 0,
   });
 }
 
@@ -400,47 +205,36 @@ export function updateSessionForMove(
   input: LimitMoveInput,
   policy: LimitPolicy = LIMITS
 ): PlaySession {
-  const progressReasons = detectProgress(input);
-  const progressed = progressReasons.length > 0;
   const recentMoveTypes = [...session.recentMoveTypes, input.move.type].slice(-policy.drawRecycleRatioWindow);
   const recentActions: PlaySession['recentActions'] = [...session.recentActions, input.move.type].slice(-MAX_RECENT_ACTIONS);
   const foundationMove = input.move.to.pile === 'foundation';
-  const tableauProgressMove = progressReasons.includes('tableau card revealed');
 
-  const nextSession: PlaySession = {
+  return {
     ...session,
     activeMs: Math.max(session.activeMs, input.activeMs),
     moves: session.moves + 1,
     stockDraws: session.stockDraws + (input.move.type === 'draw' ? 1 : 0),
     stockRecycles: session.stockRecycles + (input.move.type === 'recycle' ? 1 : 0),
     foundationMoves: session.foundationMoves + (foundationMove ? 1 : 0),
-    tableauProgressMoves: session.tableauProgressMoves + (tableauProgressMove ? 1 : 0),
-    progressEvents: session.progressEvents + (progressed ? 1 : 0),
-    lastProgressAtActiveMs: progressed ? input.activeMs : session.lastProgressAtActiveMs,
-    movesSinceProgress: progressed ? 0 : session.movesSinceProgress + 1,
+    tableauProgressMoves: session.tableauProgressMoves,
+    progressEvents: session.progressEvents,
+    lastProgressAtActiveMs: session.lastProgressAtActiveMs,
+    movesSinceProgress: session.movesSinceProgress,
     stockRecyclesThisGame: input.move.type === 'recycle'
       ? session.stockRecyclesThisGame + 1
       : session.stockRecyclesThisGame,
     recentMoveTypes,
     recentActions,
   };
-
-  const doom = calculateDoomScore(nextSession, policy);
-  return {
-    ...nextSession,
-    doomScoreMax: Math.max(nextSession.doomScoreMax, doom.score),
-  };
 }
 
 export function updateSessionForUndo(session: PlaySession, activeMs: number): PlaySession {
-  const nextSession: PlaySession = {
+  return {
     ...session,
     activeMs: Math.max(session.activeMs, activeMs),
     undoCount: session.undoCount + 1,
     recentActions: [...session.recentActions, 'undo'].slice(-MAX_RECENT_ACTIONS) as PlaySession['recentActions'],
   };
-  const doom = calculateDoomScore(nextSession);
-  return { ...nextSession, doomScoreMax: Math.max(nextSession.doomScoreMax, doom.score) };
 }
 
 export function isBlockingGate(gate: LimitGate): boolean {

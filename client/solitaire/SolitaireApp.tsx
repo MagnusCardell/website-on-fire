@@ -110,6 +110,8 @@ export function SolitaireApp() {
 
   const [showStats, setShowStats] = useState(false);
   const [showLongSessionSetup, setShowLongSessionSetup] = useState(false);
+  const [showLimitPrompt, setShowLimitPrompt] = useState(false);
+  const [stoppedForNow, setStoppedForNow] = useState(false);
   const [flyCard, setFlyCard] = useState<FlyCardState | null>(null);
   const [limitDebugEnabled, setLimitDebugEnabled] = useState(isLimitDebugEnabled);
   // Track the source element so we can restore visibility if needed
@@ -121,11 +123,38 @@ export function SolitaireApp() {
     onPersistRequest: persistNow,
   });
   const activeSyncMs = Math.floor(displayMs / 1000) * 1000;
-  const showLimitStatus = limiter.snapshot.gate.stage !== 'green' || limiter.snapshot.longSessionActive;
+  const showLimitStatus = limiter.snapshot.promptDue || limiter.snapshot.longSessionActive;
 
   const handleNewGame = useCallback(() => {
+    if (limiter.snapshot.promptDue) {
+      setShowLimitPrompt(true);
+      return;
+    }
+
+    newGame(displayMs);
+  }, [newGame, displayMs, limiter.snapshot.promptDue]);
+
+  const startPromptedNewGame = useCallback(() => {
+    setShowLimitPrompt(false);
+    setStoppedForNow(false);
     newGame(displayMs);
   }, [newGame, displayMs]);
+
+  const handleStopForNow = useCallback(() => {
+    persistNow();
+    setShowLimitPrompt(false);
+    setShowLongSessionSetup(false);
+    setStoppedForNow(true);
+    limiter.stopNow();
+  }, [limiter, persistNow]);
+
+  const handleStartLongSession = useCallback((budgetMs: number) => {
+    limiter.startLongSession(budgetMs, 'planned-leisure');
+    setShowLimitPrompt(false);
+    setShowLongSessionSetup(false);
+    setStoppedForNow(false);
+    newGame(displayMs);
+  }, [displayMs, limiter, newGame]);
 
   const handleStartDailyChallenge = useCallback(() => {
     startDailyChallenge(displayMs);
@@ -260,6 +289,22 @@ export function SolitaireApp() {
     );
   }
 
+  if (stoppedForNow) {
+    return (
+      <div className='min-h-[100dvh] bg-gradient-to-b from-green-800 to-green-950 flex items-center justify-center px-4'>
+        <div className='w-full max-w-sm rounded-lg border border-green-200/25 bg-green-950/85 p-4 text-center shadow-2xl'>
+          <h1 className='text-lg font-semibold text-white'>Game saved</h1>
+          <button
+            onClick={() => setStoppedForNow(false)}
+            className='mt-4 w-full rounded-lg bg-amber-100 px-3 py-2 text-sm font-medium text-amber-950 hover:bg-white'
+          >
+            Resume
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (!gameState) {
     return (
       <div className='min-h-[100dvh] bg-gradient-to-b from-green-800 to-green-950 flex items-center justify-center'>
@@ -332,18 +377,15 @@ export function SolitaireApp() {
 
       <LimitOverlay
         snapshot={limiter.snapshot}
+        showContinuePrompt={showLimitPrompt}
         showLongSessionSetup={showLongSessionSetup}
+        onCloseContinuePrompt={() => setShowLimitPrompt(false)}
         onCloseLongSessionSetup={() => setShowLongSessionSetup(false)}
-        onDismissSoftNudge={limiter.dismissSoftNudge}
-        onRemindAfterGame={limiter.remindAfterThisGame}
-        onStopAfterGame={limiter.stopAfterThisGame}
-        onStopNow={limiter.stopNow}
-        onContinueAfterBreak={limiter.continueAfterBreak}
-        onFinishCurrentGame={limiter.finishCurrentGame}
-        onContinueIntentionally={limiter.continueIntentionally}
-        onStartLongSession={limiter.startLongSession}
+        onOpenLongSessionSetup={() => setShowLongSessionSetup(true)}
+        onStopNow={handleStopForNow}
+        onOneMoreGame={startPromptedNewGame}
+        onStartLongSession={handleStartLongSession}
         onEndLongSession={limiter.endLongSession}
-        onAcknowledgeLongSessionCheckIn={limiter.acknowledgeLongSessionCheckIn}
       />
 
       {limitDebugEnabled && (

@@ -51,6 +51,7 @@ function clearLockedSession(state: PersistedLimitState, now = Date.now()): Persi
     stopAfterCurrentGame: undefined,
     softNudgeDismissedForSessionId: undefined,
     remindAfterCurrentGame: undefined,
+    longSessionUntil: undefined,
     lastSyncedGameKey: undefined,
     lastSyncedGameActiveMs: undefined,
     session: createPlaySession('normal', now),
@@ -72,7 +73,19 @@ function formatStatus(session: PlaySession, dailyNormalActiveMs: number): LimitS
     return `Long ${formatMinutes(used)} / ${formatMinutes(budget)}`;
   }
 
-  return `${formatMinutes(session.activeMs)} / ${formatMinutes(LIMITS.normalHardCapMs)} · Today ${formatMinutes(dailyNormalActiveMs)} / ${formatMinutes(LIMITS.normalDailyCapMs)}`;
+  return `${formatMinutes(session.activeMs)} / ${formatMinutes(LIMITS.softLimitMs)} · ${session.gamesStarted} / ${LIMITS.gameCountLimit} games`;
+}
+
+function sessionPromptReason(session: PlaySession): string {
+  if (session.gamesStarted >= LIMITS.manyRestartsGameCount) {
+    return `You've started ${session.gamesStarted} games this session. Want to stop here?`;
+  }
+
+  if (session.activeMs >= LIMITS.softLimitMs) {
+    return `You've played for ${formatMinutes(session.activeMs)}. Want to stop here or keep playing?`;
+  }
+
+  return `You've started ${session.gamesStarted} games this session. Want to stop here or keep playing?`;
 }
 
 export function usePlayLimiter() {
@@ -91,10 +104,12 @@ export function usePlayLimiter() {
       if (cancelled) return;
 
       const loadNow = Date.now();
+      const loaded = persisted ?? createInitialLimitState(loadNow);
       setState(
-        persisted?.lockUntil && persisted.lockUntil <= loadNow
-          ? clearLockedSession(persisted, loadNow)
-          : persisted ?? createInitialLimitState(loadNow)
+        (loaded.lockUntil && loaded.lockUntil <= loadNow) ||
+        (loaded.longSessionUntil && loaded.longSessionUntil <= loadNow)
+          ? clearLockedSession(loaded, loadNow)
+          : loaded
       );
       setIsLoaded(true);
     }
@@ -134,41 +149,19 @@ export function usePlayLimiter() {
   gateRef.current = gate;
 
   useEffect(() => {
-    if (!isLoaded || !state.lockUntil || state.lockUntil > now) return;
+    if (!isLoaded) return;
+    if ((!state.lockUntil || state.lockUntil > now) && (!state.longSessionUntil || state.longSessionUntil > now)) return;
 
     setState(prev => {
       const resetNow = Date.now();
-      if (!prev.lockUntil || prev.lockUntil > resetNow) return prev;
+      const lockExpired = Boolean(prev.lockUntil && prev.lockUntil <= resetNow);
+      const longSessionExpired = Boolean(prev.longSessionUntil && prev.longSessionUntil <= resetNow);
+      if (!lockExpired && !longSessionExpired) return prev;
 
       saveCompletedSession(completeSession(prev.session));
       return touch(clearLockedSession(prev, resetNow));
     });
-  }, [isLoaded, now, state.lockUntil]);
-
-  useEffect(() => {
-    if (!isLoaded) return;
-
-    if (gate.stage === 'break-gate' && !state.breakReadyAt) {
-      setState(prev => touch({ ...prev, breakReadyAt: Date.now() + LIMITS.breakPauseMs }));
-    }
-
-    if (gate.stage !== 'break-gate' && state.breakReadyAt) {
-      setState(prev => touch({ ...prev, breakReadyAt: undefined }));
-    }
-  }, [gate.stage, isLoaded, state.breakReadyAt]);
-
-  useEffect(() => {
-    if (!isLoaded) return;
-    if (state.lockUntil && state.lockUntil <= now) return;
-
-    if (gate.stage === 'normal-lock' && gate.cooldownUntil && (!state.lockUntil || state.lockUntil < now)) {
-      setState(prev => touch({
-        ...prev,
-        lockUntil: gate.cooldownUntil,
-        lockReason: gate.reasons[0] ?? 'normal play limit reached',
-      }));
-    }
-  }, [gate.stage, gate.cooldownUntil, gate.reasons, isLoaded, now, state.lockUntil]);
+  }, [isLoaded, now, state.lockUntil, state.longSessionUntil]);
 
   const syncActiveGame = useCallback((gameKey: string, gameActiveMs: number, mode: PlayMode) => {
     if (!isLoaded) return;
@@ -201,16 +194,11 @@ export function usePlayLimiter() {
   }, [isLoaded]);
 
   const canMakeMove = useCallback(() => {
-    return !gateRef.current.blocksMoves;
+    return true;
   }, []);
 
   const canStartGame = useCallback((mode: PlayMode = 'normal') => {
-    const current = stateRef.current;
-    const currentGate = gateRef.current;
-
-    if (mode === 'long-session') return true;
-    if (current.finishCurrentGameOnly || current.stopAfterCurrentGame) return false;
-    return !currentGate.blocksNewGames;
+    return true;
   }, []);
 
   const recordMove = useCallback((input: LimitMoveInput) => {
@@ -285,7 +273,6 @@ export function usePlayLimiter() {
 
   const recordWin = useCallback((activeMs: number, mode: PlayMode) => {
     setState(prev => {
-      const shouldPause = prev.stopAfterCurrentGame || prev.finishCurrentGameOnly;
       return touch({
         ...prev,
         softNudgeDismissedForSessionId: prev.remindAfterCurrentGame
@@ -294,8 +281,6 @@ export function usePlayLimiter() {
         finishCurrentGameOnly: undefined,
         stopAfterCurrentGame: undefined,
         remindAfterCurrentGame: undefined,
-        lockUntil: shouldPause ? Date.now() + LIMITS.shortCooldownMs : prev.lockUntil,
-        lockReason: shouldPause ? 'stopped after the current game' : prev.lockReason,
         session: {
           ...prev.session,
           mode: prev.session.mode === 'long-session' ? 'long-session' : mode,
@@ -349,8 +334,6 @@ export function usePlayLimiter() {
   const stopNow = useCallback(() => {
     setState(prev => touch({
       ...prev,
-      lockUntil: Date.now() + LIMITS.shortCooldownMs,
-      lockReason: 'stopped at limiter checkpoint',
       finishCurrentGameOnly: undefined,
       stopAfterCurrentGame: undefined,
       remindAfterCurrentGame: undefined,
@@ -400,17 +383,19 @@ export function usePlayLimiter() {
   }, []);
 
   const startLongSession = useCallback((budgetMs: number, reason: LongSessionReason) => {
+    const now = Date.now();
     setState(prev => {
       saveCompletedSession(completeSession(prev.session));
       return touch({
         ...clearGateDeferrals(prev),
         lockUntil: undefined,
         lockReason: undefined,
+        longSessionUntil: now + budgetMs,
         finishCurrentGameOnly: undefined,
         stopAfterCurrentGame: undefined,
         softNudgeDismissedForSessionId: undefined,
         remindAfterCurrentGame: undefined,
-        session: createPlaySession('long-session', Date.now(), {
+        session: createPlaySession('long-session', now, {
           reason,
           longSessionBudgetMs: budgetMs,
         }),
@@ -426,6 +411,7 @@ export function usePlayLimiter() {
         session: createPlaySession('normal', Date.now()),
         lockUntil: undefined,
         lockReason: undefined,
+        longSessionUntil: undefined,
         finishCurrentGameOnly: undefined,
         stopAfterCurrentGame: undefined,
         softNudgeDismissedForSessionId: undefined,
@@ -480,13 +466,14 @@ export function usePlayLimiter() {
 
   const dailyNormalActiveMs = state.dailyNormalActiveMsByDate[todayKey] ?? 0;
   const snapshot: LimitSnapshot = useMemo(() => {
-    const statusTone: LimitSnapshot['statusTone'] = state.session.mode === 'long-session'
+    const longSessionActive = Boolean(state.longSessionUntil && state.longSessionUntil > now) || state.session.mode === 'long-session';
+    const overLimit = state.session.activeMs >= LIMITS.softLimitMs || state.session.gamesStarted >= LIMITS.gameCountLimit;
+    const promptDue = !longSessionActive && overLimit;
+    const statusTone: LimitSnapshot['statusTone'] = longSessionActive
       ? 'blue'
-      : gate.stage === 'normal-lock' || gate.stage === 'daily-cap' || gate.stage === 'long-session-ended'
-        ? 'red'
-        : gate.stage === 'soft-nudge' || gate.stage === 'break-gate' || gate.stage === 'intent-gate'
-          ? 'amber'
-          : 'green';
+      : promptDue
+        ? 'amber'
+        : 'green';
 
     return {
       isLoaded,
@@ -496,11 +483,13 @@ export function usePlayLimiter() {
       todayKey,
       statusLabel: formatStatus(state.session, dailyNormalActiveMs),
       statusTone,
-      longSessionActive: state.session.mode === 'long-session',
+      longSessionActive,
+      promptDue,
+      promptReason: sessionPromptReason(state.session),
       finishCurrentGameOnly: Boolean(state.finishCurrentGameOnly),
       stopAfterCurrentGame: Boolean(state.stopAfterCurrentGame),
     };
-  }, [dailyNormalActiveMs, gate, isLoaded, state.finishCurrentGameOnly, state.session, state.stopAfterCurrentGame, todayKey]);
+  }, [dailyNormalActiveMs, gate, isLoaded, now, state.finishCurrentGameOnly, state.longSessionUntil, state.session, state.stopAfterCurrentGame, todayKey]);
 
   return {
     snapshot,

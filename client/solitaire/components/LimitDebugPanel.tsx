@@ -27,7 +27,7 @@ export function LimitDebugPanel({
             : 'border-white/15 bg-black/50 text-white/85 hover:bg-black/65'
         )}
       >
-        Limit tester: {snapshot.gate.stage}
+        Limit tester: {snapshot.longSessionActive ? 'long-session' : snapshot.promptDue ? 'prompt-due' : 'green'}
       </button>
 
       {isOpen && (
@@ -53,7 +53,8 @@ export function LimitDebugPanel({
                 title={scenario.description}
                 className={cn(
                   'min-h-12 rounded-lg border px-2 py-2 text-left text-xs transition-colors',
-                  snapshot.gate.stage === scenario.id
+                  (scenario.id === 'green' && !snapshot.promptDue && !snapshot.longSessionActive) ||
+                  (scenario.id === 'long-session' && snapshot.longSessionActive)
                     ? 'border-blue-200 bg-blue-100 text-blue-950'
                     : 'border-white/15 bg-white/5 text-white hover:bg-white/10'
                 )}

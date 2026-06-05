@@ -1,4 +1,4 @@
-import { LIMITS, createInitialLimitState, createPlaySession, getTodayKey } from './policy';
+import { LIMITS, createInitialLimitState, createPlaySession } from './policy';
 import type { LimitDebugScenario, LimitDebugScenarioId, PersistedLimitState, PlaySession } from './types';
 
 const MINUTE = 60_000;
@@ -6,16 +6,10 @@ const HOUR = 60 * MINUTE;
 
 export const LIMIT_DEBUG_SCENARIOS: LimitDebugScenario[] = [
   { id: 'green', label: 'Green', description: 'Normal low-time state' },
-  { id: 'soft-nudge', label: 'Soft', description: '20 min nudge' },
-  { id: 'daily-complete', label: 'Daily done', description: 'Daily completion nudge' },
-  { id: 'break-gate', label: 'Break', description: '60s break checkpoint' },
-  { id: 'break-ready', label: 'Break ready', description: 'Break checkpoint after countdown' },
-  { id: 'intent-gate', label: 'Intent', description: '50 min intent choice' },
-  { id: 'doom-intent', label: 'Doom 3+', description: 'Loop-play intent gate' },
-  { id: 'normal-lock', label: 'Lock', description: 'Normal-mode cooldown' },
-  { id: 'daily-cap', label: 'Daily cap', description: '90 min normal-mode cap' },
-  { id: 'long-session-checkin', label: 'Long check', description: 'Long Session check-in' },
-  { id: 'long-session-ended', label: 'Long end', description: 'Long Session budget reached' },
+  { id: 'over-time', label: 'Over time', description: '60 min active session' },
+  { id: 'over-games', label: 'Over games', description: '5 games started' },
+  { id: 'many-restarts', label: 'Restarts', description: '7 games started' },
+  { id: 'long-session', label: 'Long', description: 'Long session active' },
 ];
 
 function normalSession(now: number, activeMs: number, overrides: Partial<PlaySession> = {}): PlaySession {
@@ -45,8 +39,6 @@ export function createDebugLimitState(
   now = Date.now()
 ): PersistedLimitState {
   const state = createInitialLimitState(now);
-  const todayKey = getTodayKey(new Date(now));
-
   switch (scenarioId) {
     case 'green':
       return {
@@ -54,80 +46,35 @@ export function createDebugLimitState(
         session: normalSession(now, 8 * MINUTE),
       };
 
-    case 'soft-nudge':
+    case 'over-time':
       return {
         ...state,
-        session: normalSession(now, LIMITS.softNudgeMs),
-      };
-
-    case 'daily-complete':
-      return {
-        ...state,
-        session: normalSession(now, 12 * MINUTE, {
-          dailyCompletedThisSession: true,
+        session: normalSession(now, LIMITS.softLimitMs + MINUTE, {
+          gamesStarted: 2,
         }),
       };
 
-    case 'break-gate':
+    case 'over-games':
       return {
         ...state,
-        breakReadyAt: now + LIMITS.breakPauseMs,
-        session: normalSession(now, LIMITS.breakGateMs + MINUTE),
-      };
-
-    case 'break-ready':
-      return {
-        ...state,
-        breakReadyAt: now - 1_000,
-        session: normalSession(now, LIMITS.breakGateMs + MINUTE),
-      };
-
-    case 'intent-gate':
-      return {
-        ...state,
-        session: normalSession(now, LIMITS.intentGateMs + MINUTE),
-      };
-
-    case 'doom-intent':
-      return {
-        ...state,
-        session: normalSession(now, 30 * MINUTE, {
-          lastProgressAtActiveMs: 12 * MINUTE,
-          movesSinceProgress: 31,
-          stockRecyclesThisGame: 4,
-          recentMoveTypes: Array(20).fill('draw'),
+        session: normalSession(now, 18 * MINUTE, {
+          gamesStarted: LIMITS.gameCountLimit,
         }),
       };
 
-    case 'normal-lock':
+    case 'many-restarts':
       return {
         ...state,
-        lockUntil: now + LIMITS.shortCooldownMs,
-        lockReason: 'debug normal-mode lock',
-        session: normalSession(now, LIMITS.normalHardCapMs + MINUTE),
-      };
-
-    case 'daily-cap':
-      return {
-        ...state,
-        dailyNormalActiveMsByDate: {
-          [todayKey]: LIMITS.normalDailyCapMs,
-        },
-        session: normalSession(now, 14 * MINUTE),
-      };
-
-    case 'long-session-checkin':
-      return {
-        ...state,
-        session: longSession(now, LIMITS.longSessionCheckInMs + MINUTE, {
-          longSessionLastCheckInAtActiveMs: 0,
+        session: normalSession(now, 24 * MINUTE, {
+          gamesStarted: LIMITS.manyRestartsGameCount,
         }),
       };
 
-    case 'long-session-ended':
+    case 'long-session':
       return {
         ...state,
-        session: longSession(now, 2 * HOUR + MINUTE),
+        longSessionUntil: now + 2 * HOUR,
+        session: longSession(now, 30 * MINUTE),
       };
   }
 }

@@ -58,6 +58,16 @@ function clearLockedSession(state: PersistedLimitState, now = Date.now()): Persi
   };
 }
 
+function shouldResetSessionForToday(state: PersistedLimitState, now = Date.now()): boolean {
+  if (state.session.mode === 'long-session') return false;
+  return getTodayKey(new Date(state.session.startedAt)) !== getTodayKey(new Date(now));
+}
+
+function activeMsFromGameInput(state: PersistedLimitState, gameActiveMs: number): number {
+  if (state.lastSyncedGameActiveMs === undefined) return state.session.activeMs;
+  return state.session.activeMs + clampActiveDelta(gameActiveMs, state.lastSyncedGameActiveMs);
+}
+
 function completeSession(session: PlaySession): PlaySession {
   return { ...session, endedAt: Date.now() };
 }
@@ -104,7 +114,12 @@ export function usePlayLimiter() {
       if (cancelled) return;
 
       const loadNow = Date.now();
-      const loaded = persisted ?? createInitialLimitState(loadNow);
+      let loaded = persisted ?? createInitialLimitState(loadNow);
+      if (shouldResetSessionForToday(loaded, loadNow)) {
+        saveCompletedSession(completeSession(loaded.session));
+        loaded = clearLockedSession(loaded, loadNow);
+      }
+
       setState(
         (loaded.lockUntil && loaded.lockUntil <= loadNow) ||
         (loaded.longSessionUntil && loaded.longSessionUntil <= loadNow)
@@ -147,6 +162,18 @@ export function usePlayLimiter() {
   const gate = useMemo(() => evaluateLimitState(state, now, todayKey), [state, now, todayKey]);
   const gateRef = useRef(gate);
   gateRef.current = gate;
+
+  useEffect(() => {
+    if (!isLoaded || !shouldResetSessionForToday(state, now)) return;
+
+    setState(prev => {
+      const resetNow = Date.now();
+      if (!shouldResetSessionForToday(prev, resetNow)) return prev;
+
+      saveCompletedSession(completeSession(prev.session));
+      return touch(clearLockedSession(prev, resetNow));
+    });
+  }, [isLoaded, now, state.session.mode, state.session.startedAt]);
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -203,20 +230,24 @@ export function usePlayLimiter() {
 
   const recordMove = useCallback((input: LimitMoveInput) => {
     setState(prev => {
-      const activeMs = Math.max(prev.session.activeMs, input.activeMs);
+      const activeMs = activeMsFromGameInput(prev, input.activeMs);
       const session = updateSessionForMove(prev.session, {
         ...input,
         activeMs,
       });
-      return touch({ ...prev, session });
+      return touch({ ...prev, session, lastSyncedGameActiveMs: input.activeMs });
     });
   }, []);
 
   const recordUndo = useCallback((activeMs: number) => {
-    setState(prev => touch({
-      ...prev,
-      session: updateSessionForUndo(prev.session, Math.max(prev.session.activeMs, activeMs)),
-    }));
+    setState(prev => {
+      const sessionActiveMs = activeMsFromGameInput(prev, activeMs);
+      return touch({
+        ...prev,
+        session: updateSessionForUndo(prev.session, sessionActiveMs),
+        lastSyncedGameActiveMs: activeMs,
+      });
+    });
   }, []);
 
   const recordGameStarted = useCallback((mode: PlayMode) => {
@@ -240,39 +271,48 @@ export function usePlayLimiter() {
   }, []);
 
   const recordGameAbandoned = useCallback((activeMs: number) => {
-    setState(prev => touch({
-      ...prev,
-      softNudgeDismissedForSessionId: prev.remindAfterCurrentGame
-        ? undefined
-        : prev.softNudgeDismissedForSessionId,
-      remindAfterCurrentGame: undefined,
-      session: {
-        ...prev.session,
-        activeMs: Math.max(prev.session.activeMs, activeMs),
-        abandonedGames: prev.session.abandonedGames + 1,
-        stockRecyclesThisGame: 0,
-      },
-    }));
+    setState(prev => {
+      const sessionActiveMs = activeMsFromGameInput(prev, activeMs);
+      return touch({
+        ...prev,
+        softNudgeDismissedForSessionId: prev.remindAfterCurrentGame
+          ? undefined
+          : prev.softNudgeDismissedForSessionId,
+        remindAfterCurrentGame: undefined,
+        lastSyncedGameActiveMs: activeMs,
+        session: {
+          ...prev.session,
+          activeMs: sessionActiveMs,
+          abandonedGames: prev.session.abandonedGames + 1,
+          stockRecyclesThisGame: 0,
+        },
+      });
+    });
   }, []);
 
   const recordLoss = useCallback((activeMs: number) => {
-    setState(prev => touch({
-      ...prev,
-      softNudgeDismissedForSessionId: prev.remindAfterCurrentGame
-        ? undefined
-        : prev.softNudgeDismissedForSessionId,
-      remindAfterCurrentGame: undefined,
-      session: {
-        ...prev.session,
-        activeMs: Math.max(prev.session.activeMs, activeMs),
-        losses: prev.session.losses + 1,
-        stockRecyclesThisGame: 0,
-      },
-    }));
+    setState(prev => {
+      const sessionActiveMs = activeMsFromGameInput(prev, activeMs);
+      return touch({
+        ...prev,
+        softNudgeDismissedForSessionId: prev.remindAfterCurrentGame
+          ? undefined
+          : prev.softNudgeDismissedForSessionId,
+        remindAfterCurrentGame: undefined,
+        lastSyncedGameActiveMs: activeMs,
+        session: {
+          ...prev.session,
+          activeMs: sessionActiveMs,
+          losses: prev.session.losses + 1,
+          stockRecyclesThisGame: 0,
+        },
+      });
+    });
   }, []);
 
   const recordWin = useCallback((activeMs: number, mode: PlayMode) => {
     setState(prev => {
+      const sessionActiveMs = activeMsFromGameInput(prev, activeMs);
       return touch({
         ...prev,
         softNudgeDismissedForSessionId: prev.remindAfterCurrentGame
@@ -281,14 +321,15 @@ export function usePlayLimiter() {
         finishCurrentGameOnly: undefined,
         stopAfterCurrentGame: undefined,
         remindAfterCurrentGame: undefined,
+        lastSyncedGameActiveMs: activeMs,
         session: {
           ...prev.session,
           mode: prev.session.mode === 'long-session' ? 'long-session' : mode,
-          activeMs: Math.max(prev.session.activeMs, activeMs),
+          activeMs: sessionActiveMs,
           wins: prev.session.wins + 1,
           wonGameThisSession: true,
           progressEvents: prev.session.progressEvents + 1,
-          lastProgressAtActiveMs: Math.max(prev.session.activeMs, activeMs),
+          lastProgressAtActiveMs: sessionActiveMs,
           movesSinceProgress: 0,
           stockRecyclesThisGame: 0,
         },

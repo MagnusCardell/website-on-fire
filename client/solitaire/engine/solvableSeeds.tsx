@@ -49,12 +49,24 @@ export function getKey(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
-// Get the seed for a specific day
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+// Get the seed for a specific day.
+// Indexed by day count, so the list is walked in order and no deal comes back
+// until every one of them has been played.
 export function getDailySeed(dateKey: string): number {
   const [year, month, day] = dateKey.split('-').map(Number);
+  const dayNumber = Math.floor(Date.UTC(year, month - 1, day) / DAY_MS);
+  const count = SOLVABLE_SEEDS.length;
+  return SOLVABLE_SEEDS[((dayNumber % count) + count) % count];
+}
+
+// The mapping used before the day-count index. Kept only so a daily game that
+// was saved by an older version is still recognised as that day's daily.
+export function getLegacyDailySeed(dateKey: string): number {
+  const [year, month, day] = dateKey.split('-').map(Number);
   const dateHash = year * 10000 + month * 100 + day;
-  const index = dateHash % SOLVABLE_SEEDS.length;
-  return SOLVABLE_SEEDS[index];
+  return SOLVABLE_SEEDS[dateHash % SOLVABLE_SEEDS.length];
 }
 
 // Get today's daily challenge seed

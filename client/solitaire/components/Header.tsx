@@ -93,8 +93,10 @@ export function Header({
         data-sol-top-edge
         className={cn(
           'sticky top-0 z-30',
-          // layout
-          'grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-1.5 gap-y-1',
+          // layout: the clock is centred while there is room; when there is
+          // not, the side columns keep their content's width, so the three
+          // groups can never slide over each other
+          'grid grid-cols-[1fr_auto_1fr] items-center gap-x-1.5 gap-y-1',
           // separation
           'border-b border-green-700/50',
           // spacing: compact for iPhone + safe-area aware
@@ -107,7 +109,7 @@ export function Header({
         }}
       >
         {/* Left */}
-        <div className='min-w-0 flex items-center gap-1 justify-self-start'>
+        <div className='flex items-center gap-1 justify-self-start'>
           <button
             onClick={onUndo}
             disabled={!canUndo}
@@ -125,32 +127,39 @@ export function Header({
           <div
             className={cn(
               controlHeightClass,
-              'min-w-[4rem] rounded-xl border border-green-700/25 bg-green-950/25 px-2 flex items-center justify-center text-white/80 text-xs font-medium tabular-nums whitespace-nowrap'
+              // On a phone the word sits under the number, which takes half the
+              // width of "157 moves" on one line; side by side from 430 pt up
+              'min-w-[2.75rem] rounded-xl border border-green-700/25 bg-green-950/25 px-2 font-medium tabular-nums whitespace-nowrap leading-none',
+              'flex flex-col items-center justify-center gap-0.5 min-[430px]:flex-row min-[430px]:gap-1'
             )}
             aria-label={formatMoveCount(moveCount)}
           >
-            {formatMoveCount(moveCount)}
+            <span className='text-sm text-white/90 min-[430px]:text-xs min-[430px]:text-white/80'>{moveCount}</span>
+            <span className='text-[9px] text-white/60 min-[430px]:text-xs min-[430px]:text-white/80'>
+              {moveCount === 1 ? 'move' : 'moves'}
+            </span>
           </div>
         </div>
 
         {/* Center */}
-        <div className='justify-self-center text-white font-medium tabular-nums text-base min-w-0'>
+        <div className='justify-self-center text-white font-medium tabular-nums text-base whitespace-nowrap'>
           <button
             onClick={() => setShowCalendar(true)}
             className={cn(
               controlHeightClass,
-              'min-w-[5.75rem] flex items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-black/15 px-2.5 hover:bg-white/10 transition-colors'
+              'min-w-[3.75rem] min-[360px]:min-w-[5.75rem] flex items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-black/15 px-2.5 hover:bg-white/10 transition-colors'
             )}
             aria-label='Daily challenge calendar'
           >
             <Clock clock={clock} gameId={gameId} running={clockRunning} />
-            <Crown className='w-4 h-4 text-gray-400' />
-            <span className='text-gray-400 text-sm font-medium tabular-nums'>{crownCount}</span>
+            {/* The crown count gives way first when the screen is 320 pt wide */}
+            <Crown className='w-4 h-4 text-gray-400 max-[359px]:hidden' />
+            <span className='text-gray-400 text-sm font-medium tabular-nums max-[359px]:hidden'>{crownCount}</span>
           </button>
         </div>
 
         {/* Right */}
-        <div className='min-w-0 flex items-center gap-1 justify-self-end'>
+        <div className='flex items-center gap-1 justify-self-end'>
           <button
             onClick={onStartDaily}
             disabled={todayCompleted}

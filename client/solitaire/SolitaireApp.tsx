@@ -78,7 +78,9 @@ function FlyingCard({ card, fromX, fromY, toX, toY }: FlyCardState) {
 }
 
 export function SolitaireApp() {
-  useLayoutVars();
+  // The element the board fills; the layout is worked out from its size
+  const [boardArea, setBoardArea] = useState<HTMLElement | null>(null);
+  useLayoutVars(boardArea);
   const limiter = usePlayLimiter();
   const {
     gameState,
@@ -336,7 +338,7 @@ export function SolitaireApp() {
           : undefined}
       />
 
-      <main className='flex-1 relative overflow-hidden'>
+      <main ref={setBoardArea} className='flex-1 min-h-0 relative overflow-hidden'>
         <GameBoard
           gameState={gameState}
           isSelected={isSelected}
@@ -351,10 +353,10 @@ export function SolitaireApp() {
 
         {/* Autocomplete button — floats over the board, no layout shift */}
         {canAutocomplete && !limiter.snapshot.gate.blocksMoves && (
-          <div className='absolute top-3 left-0 right-0 flex justify-center z-10 pointer-events-none'>
+          <div className='absolute top-1 left-0 right-0 flex justify-center z-10 pointer-events-none'>
             <button
               onClick={handleAutocomplete}
-              className='px-6 py-1.5 rounded-full bg-green-950/90 hover:bg-green-900 text-white text-sm font-medium shadow-lg pointer-events-auto transition-colors'
+              className='h-11 px-7 rounded-full bg-green-950/90 hover:bg-green-900 text-white text-base font-medium shadow-lg pointer-events-auto transition-colors'
             >
               Autocomplete
             </button>

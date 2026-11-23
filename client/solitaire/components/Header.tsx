@@ -25,6 +25,10 @@ interface HeaderProps {
   };
 }
 
+// The header's colour, solid: green-900 at 80% over the felt's green-800, as it
+// looked before, without the transparency. Also the theme colour in index.html.
+const HEADER_BACKGROUND = '#14572e';
+
 function formatMoveCount(moveCount: number): string {
   return `${moveCount} ${moveCount === 1 ? 'move' : 'moves'}`;
 }
@@ -70,22 +74,37 @@ export function Header({
     return () => clearInterval(interval);
   }, [isPlayingDaily, currentDateKey]);
 
-  const iconButtonClass = 'h-8 w-8 shrink-0 rounded-lg transition-all flex items-center justify-center';
+  // Finger-sized: 44 pt on every current iPhone, 40 pt where the screen is only 375 pt wide
+  const controlHeightClass = 'h-10 min-[390px]:h-11';
+  const iconButtonClass = cn(
+    controlHeightClass,
+    'w-10 min-[390px]:w-11 shrink-0 rounded-xl transition-all flex items-center justify-center'
+  );
   const passiveButtonClass = 'bg-green-800/50 hover:bg-green-700/50 text-white';
+  const iconClass = 'w-5 h-5';
 
   return (
     <>
       <header
+        // The header is the page's own top edge. It is sticky at the very top
+        // with a solid colour, and its padding reaches up behind the status
+        // area: that is where iOS takes the status area's colour from, and it
+        // keeps the buttons clear of the clock in every state the system has.
+        data-sol-top-edge
         className={cn(
+          'sticky top-0 z-30',
           // layout
-          'grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-2 gap-y-1',
-          // background / separation
-          'bg-green-900/80 backdrop-blur-sm border-b border-green-700/50',
+          'grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-1.5 gap-y-1',
+          // separation
+          'border-b border-green-700/50',
           // spacing: compact for iPhone + safe-area aware
           'pb-2',
-          'pt-[calc(env(safe-area-inset-top)+0.25rem)]',
-          'pl-[calc(env(safe-area-inset-left)+0.75rem)] pr-[calc(env(safe-area-inset-right)+0.75rem)]'
+          'pl-[calc(env(safe-area-inset-left)+0.5rem)] pr-[calc(env(safe-area-inset-right)+0.5rem)]'
         )}
+        style={{
+          backgroundColor: HEADER_BACKGROUND,
+          paddingTop: 'calc(var(--sol-safe-top, env(safe-area-inset-top, 0px)) + 0.25rem)',
+        }}
       >
         {/* Left */}
         <div className='min-w-0 flex items-center gap-1 justify-self-start'>
@@ -100,11 +119,14 @@ export function Header({
             )}
             aria-label='Undo'
           >
-            <Undo2 className='w-4 h-4' />
+            <Undo2 className={iconClass} />
           </button>
 
           <div
-            className='h-8 min-w-[4.4rem] rounded-lg border border-green-700/25 bg-green-950/25 px-2 flex items-center justify-center text-white/80 text-[11px] font-medium tabular-nums'
+            className={cn(
+              controlHeightClass,
+              'min-w-[4rem] rounded-xl border border-green-700/25 bg-green-950/25 px-2 flex items-center justify-center text-white/80 text-xs font-medium tabular-nums whitespace-nowrap'
+            )}
             aria-label={formatMoveCount(moveCount)}
           >
             {formatMoveCount(moveCount)}
@@ -112,15 +134,18 @@ export function Header({
         </div>
 
         {/* Center */}
-        <div className='justify-self-center text-white font-medium tabular-nums text-sm min-w-0'>
+        <div className='justify-self-center text-white font-medium tabular-nums text-base min-w-0'>
           <button
             onClick={() => setShowCalendar(true)}
-            className='h-8 min-w-[5.3rem] flex items-center justify-center gap-1 rounded-lg border border-white/10 bg-black/15 px-2 hover:bg-white/10 transition-colors'
+            className={cn(
+              controlHeightClass,
+              'min-w-[5.75rem] flex items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-black/15 px-2.5 hover:bg-white/10 transition-colors'
+            )}
             aria-label='Daily challenge calendar'
           >
             <Clock clock={clock} gameId={gameId} running={clockRunning} />
             <Crown className='w-4 h-4 text-gray-400' />
-            <span className='text-gray-400 text-sm font-medium tabular-nums'>{crownCount} </span>
+            <span className='text-gray-400 text-sm font-medium tabular-nums'>{crownCount}</span>
           </button>
         </div>
 
@@ -141,9 +166,9 @@ export function Header({
             title={todayCompleted ? 'Daily complete' : 'Daily challenge'}
           >
             {todayCompleted ? (
-              <Crown className='w-4 h-4' />
+              <Crown className={iconClass} />
             ) : (
-              <Calendar className='w-4 h-4' />
+              <Calendar className={iconClass} />
             )}
           </button>
 
@@ -152,7 +177,7 @@ export function Header({
             className={cn(iconButtonClass, passiveButtonClass)}
             aria-label='Statistics'
           >
-            <BarChart3 className='w-4 h-4' />
+            <BarChart3 className={iconClass} />
           </button>
 
           <button
@@ -160,7 +185,7 @@ export function Header({
             className={cn(iconButtonClass, passiveButtonClass)}
             aria-label='New Game'
           >
-            <RotateCcw className='w-4 h-4' />
+            <RotateCcw className={iconClass} />
           </button>
         </div>
 
@@ -168,7 +193,7 @@ export function Header({
           <button
             onClick={limitStatus.onClick}
             className={cn(
-              'col-span-3 justify-self-center h-5 w-full max-w-[18rem] truncate rounded-full border px-3 text-[10px] leading-5 transition-colors',
+              'col-span-3 justify-self-center h-7 w-full max-w-[18rem] truncate rounded-full border px-3 text-xs leading-7 transition-colors',
               limitStatus.tone === 'green' && 'bg-green-950/45 border-green-700/35 text-green-100/80 hover:bg-green-900/60',
               limitStatus.tone === 'amber' && 'bg-amber-950/60 border-amber-500/50 text-amber-100 hover:bg-amber-900/70',
               limitStatus.tone === 'red' && 'bg-red-950/60 border-red-500/50 text-red-100 hover:bg-red-900/70',

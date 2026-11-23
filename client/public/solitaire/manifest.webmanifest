@@ -6,8 +6,8 @@
   "scope": "/solitaire/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#1a472a",
-  "theme_color": "#1a472a",
+  "background_color": "#052e16",
+  "theme_color": "#14572e",
   "icons": [
     {
       "src": "/solitaire/icon-192.png",

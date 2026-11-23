@@ -170,7 +170,11 @@ export const GameBoard = React.memo(function GameBoard({
 
   return (
     <div
-      className='relative w-full h-full flex flex-col items-center py-10 pb-[env(safe-area-inset-bottom)]'
+      className='relative w-full h-full flex flex-col items-center'
+      style={{
+        paddingTop: 'var(--sol-pad-top)',
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+      }}
       onClick={(e) => {
         // Click on empty space clears selection
         if (e.target === e.currentTarget) {
@@ -180,7 +184,7 @@ export const GameBoard = React.memo(function GameBoard({
     >
 
       {/* Top row */}
-      <div style={boardStyle} className='mb-3'>
+      <div style={{ ...boardStyle, marginBottom: 'var(--sol-row-gap)' }}>
         <div style={sevenColGrid} className='items-start'>
           <div style={{ gridColumn: 1 }}>
             {/* Stock */}

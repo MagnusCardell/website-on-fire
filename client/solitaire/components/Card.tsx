@@ -133,16 +133,17 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(({
     );
   }
 
+  // Sized from the card, so the faces stay readable as the cards grow
   const rankStyle: React.CSSProperties = {
-    fontSize: 'clamp(16px, calc(var(--sol-card-w) * 0.28), 20px)',
+    fontSize: 'clamp(16px, calc(var(--sol-card-w) * 0.36), 40px)',
     lineHeight: 1,
   };
   const pipStyle: React.CSSProperties = {
-    fontSize: 'clamp(14px, calc(var(--sol-card-w) * 0.22), 16px)',
+    fontSize: 'clamp(14px, calc(var(--sol-card-w) * 0.3), 34px)',
     lineHeight: 1,
   };
   const centerStyle: React.CSSProperties = {
-    fontSize: 'clamp(24px, calc(var(--sol-card-w) * 0.42), 28px)',
+    fontSize: 'clamp(24px, calc(var(--sol-card-w) * 0.5), 56px)',
     lineHeight: 1,
   };
 

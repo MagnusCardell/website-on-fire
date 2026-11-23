@@ -1,9 +1,6 @@
-import React, { useRef, useEffect } from 'react';
+import React from 'react';
 import type { Card as CardType } from '../engine/types';
 import { Card, EmptyPile } from './Card';
-import { registerPile } from '../hooks/usePointer';
-import { readCssPx } from '../lib/cssVars';
-import { cn } from '../lib/utils';
 
 interface PileProps {
   cards: CardType[];
@@ -19,6 +16,30 @@ interface PileProps {
   onPileClick?: () => void;
 }
 
+// Offsets are written as CSS over the layout variables, so rendering a pile
+// never has to read a measurement back from the page.
+
+// How far down a tableau pile the card at `index` sits, as a CSS length sum
+function tableauFan(cards: CardType[], index: number): string {
+  let faceDown = 0;
+  let faceUp = 0;
+  for (let i = 0; i < index; i++) {
+    if (cards[i].faceUp) faceUp++;
+    else faceDown++;
+  }
+  return `var(--sol-fan-down) * ${faceDown} + var(--sol-fan-up) * ${faceUp}`;
+}
+
+function pileHeight(pileType: PileProps['pileType'], cards: CardType[]): string {
+  if (pileType === 'tableau') {
+    const last = Math.max(0, cards.length - 1);
+    return `calc(var(--sol-card-h) + ${tableauFan(cards, last)})`;
+  }
+
+  // stock: small extra for the depth effect
+  return pileType === 'stock' ? 'calc(var(--sol-card-h) + 10px)' : 'var(--sol-card-h)';
+}
+
 export function Pile({
   cards,
   pileType,
@@ -32,49 +53,10 @@ export function Pile({
   onEmptyClick,
   onPileClick,
 }: PileProps) {
-  const pileRef = useRef<HTMLDivElement>(null);
   const pileId = `${pileType}-${pileIndex}`;
-
-  useEffect(() => {
-    const el = pileRef.current;
-    if (!el) return;
-  
-    const update = () => registerPile(pileId, el);
-    update();
-  
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
-  
-    window.addEventListener("scroll", update, true);
-    window.addEventListener("resize", update);
-  
-    return () => {
-      ro.disconnect();
-      window.removeEventListener("scroll", update, true);
-      window.removeEventListener("resize", update);
-      registerPile(pileId, null);
-    };
-  }, [pileId]);
-
-  const cardH = readCssPx('--sol-card-h', 84);
-  const fanUp = readCssPx('--sol-fan-up', 24);
-  const fanDown = readCssPx('--sol-fan-down', 8);
-
-  const getPileHeight = () => {
-    if (pileType === 'tableau') {
-      let h = cardH;
-      for (let i = 0; i < cards.length - 1; i++) {
-        h += cards[i].faceUp ? fanUp : fanDown;
-      }
-      return Math.max(h, cardH);
-    }
-    else if(pileType === 'foundation') {
-      return cardH;
-    }
-
-    // stock/waste: always at least one card tall
-    // small extra for stock depth effect 
-    return pileType === 'stock' ? cardH + 10 : cardH;
+  const pileStyle: React.CSSProperties = {
+    width: 'var(--sol-card-w)',
+    height: pileHeight(pileType, cards),
   };
 
   // Calculate card positions based on pile type
@@ -104,17 +86,12 @@ export function Pile({
         return {
           zIndex: index,
         };
-      case 'tableau': {
+      case 'tableau':
         // Face-down cards stacked tighter, face-up spread more
-        let offset = 0;
-        for (let i = 0; i < index; i++) {
-          offset += cards[i].faceUp ? fanUp : fanDown;
-        }
         return {
-          top: offset,
+          top: `calc(${tableauFan(cards, index)})`,
           zIndex: index,
         };
-      }
       default:
         return {};
     }
@@ -124,24 +101,23 @@ export function Pile({
   // For stock pile, show recycle indicator when empty
   if (isEmpty && pileType === 'stock') {
     return (
-      <div 
-        ref={pileRef} 
+      <div
         data-pile-id={pileId}
         className='relative'
-        style={{ width: 'var(--sol-card-w)', height: getPileHeight() }}
+        style={pileStyle}
       >
         <EmptyPile type='stock' onClick={onEmptyClick}>
-          <svg 
-            className='w-6 h-6 text-gray-500' 
-            fill='none' 
-            stroke='currentColor' 
+          <svg
+            className='w-6 h-6 text-gray-500'
+            fill='none'
+            stroke='currentColor'
             viewBox='0 0 24 24'
           >
-            <path 
-              strokeLinecap='round' 
-              strokeLinejoin='round' 
-              strokeWidth={2} 
-              d='M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15' 
+            <path
+              strokeLinecap='round'
+              strokeLinejoin='round'
+              strokeWidth={2}
+              d='M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15'
             />
           </svg>
         </EmptyPile>
@@ -151,15 +127,14 @@ export function Pile({
 
   if (isEmpty) {
     return (
-      <div 
-        ref={pileRef} 
+      <div
         data-pile-id={pileId}
         className='relative'
-        style={{ width: 'var(--sol-card-w)', height: getPileHeight() }}
+        style={pileStyle}
         onClick={onPileClick}
       >
-        <EmptyPile 
-          type={pileType === 'foundation' ? 'foundation' : 'tableau'} 
+        <EmptyPile
+          type={pileType === 'foundation' ? 'foundation' : 'tableau'}
         />
       </div>
     );
@@ -167,12 +142,9 @@ export function Pile({
 
   return (
     <div
-      ref={pileRef}
       data-pile-id={pileId}
-      className={cn(
-        'relative',
-      )}
-      style={{ width: 'var(--sol-card-w)', height: getPileHeight() }}
+      className='relative'
+      style={pileStyle}
       onClick={onPileClick}
     >
       {cards.map((card, index) => {

@@ -1,360 +1,205 @@
 import { useState, useCallback, useRef } from 'react';
-import { readCssPx } from '../lib/cssVars';
+import { pickDropTarget, type DropTarget, type PileBox } from './dropTarget';
 
+type DragSource = 'waste' | 'tableau' | 'foundation';
+
+// What React needs to know about a drag: which cards, and where they started.
+// The position while dragging never goes through React; see moveOverlay.
 export interface DragState {
   cardIds: string[];
-  fromPile: 'waste' | 'tableau' | 'foundation';
+  fromPile: DragSource;
   fromIndex: number;
-  startX: number;
-  startY: number;
-  currentX: number;
-  currentY: number;
-  offsetX: number;
-  offsetY: number;
+  originX: number;
+  originY: number;
 }
 
 interface UsePointerOptions {
-  onDragStart?: (cardId: string, fromPile: 'waste' | 'tableau' | 'foundation', fromIndex: number) => string[];
-  onDragEnd?: (drag: DragState, dropTarget: { pile: 'foundation' | 'tableau'; index: number } | null) => void;
-  onTap?: (cardId: string, fromPile: 'waste' | 'tableau' | 'stock' | 'foundation', fromIndex: number) => void;
+  onDragStart?: (cardId: string, fromPile: DragSource, fromIndex: number) => string[];
+  onDragEnd?: (drag: DragState, dropTarget: DropTarget | null) => void;
+  onTap?: (cardId: string, fromPile: DragSource | 'stock', fromIndex: number) => void;
   onDoubleTap?: (cardId: string, fromPile: 'waste' | 'tableau', fromIndex: number) => void;
-  getValidDropTargets?: (cardId: string) => { pile: 'foundation' | 'tableau'; index: number }[];
+  getValidDropTargets?: (cardId: string) => DropTarget[];
 }
 
-// Track pile element positions for hit testing
-const pileRects = new Map<string, DOMRect>();
-
-export function registerPile(pileId: string, element: HTMLElement | null) {
-  if (element) {
-    pileRects.set(pileId, element.getBoundingClientRect());
-  } else {
-    pileRects.delete(pileId);
-  }
+// One press, from finger down to finger up
+interface Press {
+  pointerId: number;
+  cardId: string;
+  fromPile: DragSource;
+  fromIndex: number;
+  startX: number;
+  startY: number;
+  dx: number;
+  dy: number;
+  // The pressed card's box at finger down
+  originX: number;
+  originY: number;
+  cardW: number;
+  cardH: number;
+  // Set once the finger has travelled far enough to mean a drag
+  drag: DragState | null;
+  targets: DropTarget[];
+  piles: PileBox[];
 }
 
-function expandRect(r: DOMRect, pad: number, padBottomExtra = 0) {
-  return new DOMRect(
-    r.left - pad,
-    r.top - pad,
-    r.width + pad * 2,
-    r.height + pad * 2 + padBottomExtra
-  );
-}
+const DRAG_THRESHOLD_PX = 10;
+const DOUBLE_TAP_MS = 400;
 
-function rectCenter(r: DOMRect) {
-  return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
-}
-
-function dist(a: {x:number;y:number}, b: {x:number;y:number}) {
-  const dx = a.x - b.x, dy = a.y - b.y;
-  return Math.sqrt(dx*dx + dy*dy);
-}
-
-// Calculate overlap area between two rectangles
-function getOverlapArea(rect1: DOMRect, rect2: DOMRect): number {
-  const xOverlap = Math.max(0, Math.min(rect1.right, rect2.right) - Math.max(rect1.left, rect2.left));
-  const yOverlap = Math.max(0, Math.min(rect1.bottom, rect2.bottom) - Math.max(rect1.top, rect2.top));
-  return xOverlap * yOverlap;
-}
-
-function landingRectForPile(pileType: "foundation" | "tableau", pileRect: DOMRect): DOMRect {
-  const cardH = readCssPx("--sol-card-h", 84);
-  const cardW = readCssPx("--sol-card-w", 60);
-
-  if (pileType === "foundation") {
-    // Entire pile is the target
-    return new DOMRect(pileRect.left, pileRect.top, pileRect.width, pileRect.height);
-  }
-
-  // Tableau: target the bottom "slot" where a drop would land.
-  // Use card size; keep width aligned to pile column.
-  const w = Math.min(pileRect.width, cardW);
-  const x = pileRect.left + (pileRect.width - w) / 2;
-  const y = pileRect.bottom - cardH;
-
-  return new DOMRect(x, y, w, cardH);
-}
-
-function clamp(n: number, lo: number, hi: number) {
-  return Math.max(lo, Math.min(hi, n));
+// Where every pile is on screen right now
+function measurePiles(): PileBox[] {
+  return Array.from(document.querySelectorAll<HTMLElement>('[data-pile-id]')).map((el) => {
+    const r = el.getBoundingClientRect();
+    return {
+      id: el.dataset.pileId ?? '',
+      box: { left: r.left, top: r.top, width: r.width, height: r.height },
+    };
+  });
 }
 
 export function usePointer(options: UsePointerOptions) {
   const [drag, setDrag] = useState<DragState | null>(null);
-  const [validTargets, setValidTargets] = useState<{ pile: 'foundation' | 'tableau'; index: number }[]>([]);
-  const dragRef = useRef<DragState | null>(null);
-  const isDraggingRef = useRef(false);
-  const tapStartTimeRef = useRef(0);
-  const tapStartPosRef = useRef({ x: 0, y: 0 });
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
+
+  const pressRef = useRef<Press | null>(null);
+  const overlayRef = useRef<HTMLElement | null>(null);
   const lastTapRef = useRef<{ cardId: string; time: number } | null>(null);
-  const lastBestRef = useRef<{ target: { pile: "foundation" | "tableau"; index: number } | null; score: number }>({
-    target: null,
-    score: -Infinity,
-  });
-  
-  // Hit test using card overlap instead of pointer position
-  const hitTestByOverlap = useCallback(
-    (
-      draggedCardRect: DOMRect,
-      pointerType: "touch" | "mouse" | "pen",
-      pointer: { x: number; y: number }, // pass current pointer coords
-      allowed?: Set<string>
-    ): { pile: "foundation" | "tableau"; index: number } | null => {
-  
-      const cardArea = draggedCardRect.width * draggedCardRect.height;
-      if (!Number.isFinite(cardArea) || cardArea <= 0) return null;
-  
-      const pad = pointerType === "touch" ? 18 : 10;
-      const cardW = readCssPx("--sol-card-w", draggedCardRect.width);
-  
-      let bestTarget: { pile: "foundation" | "tableau"; index: number } | null = null;
-      let bestScore = -Infinity;
-  
-      const draggedCenter = rectCenter(draggedCardRect);
-      const pointerPoint = pointer;
-  
-      for (const [pileId, pileRectRaw] of pileRects.entries()) {
-        const [pileTypeRaw, indexStr] = pileId.split("-");
-        if (pileTypeRaw !== "foundation" && pileTypeRaw !== "tableau") continue;
-  
-        const pileType = pileTypeRaw as "foundation" | "tableau";
-        const index = Number.parseInt(indexStr, 10);
-        if (!Number.isFinite(index)) continue;
-        if (allowed && allowed.size > 0 && !allowed.has(`${pileType}-${index}`)) continue;
-  
-        // Expand pile rect for magnetism
-        const pileRectMag =
-          pileType === "tableau"
-            ? expandRect(pileRectRaw, pad, 34)
-            : expandRect(pileRectRaw, pad);
-  
-        // Compute landing zone and expand it a bit too (finger-friendly)
-        const landing = landingRectForPile(pileType, pileRectMag);
-        const landingMag = expandRect(landing, pointerType === "touch" ? 14 : 8);
-  
-        const overlap = getOverlapArea(draggedCardRect, landingMag);
-        const overlapNorm = overlap / cardArea; // ~0..1
-  
-        // Distance from dragged card center to landing zone center
-        const landCenter = rectCenter(landingMag);
-        const dCenter = dist(draggedCenter, landCenter);
-        const distNorm = clamp(dCenter / (cardW * 1.2), 0, 1);
-  
-        // Distance from pointer to landing zone center (very important on touch)
-        const dPointer = dist(pointerPoint, landCenter);
-        const pointerNorm = clamp(dPointer / (cardW * 1.1), 0, 1);
-  
-        // Proximity is "1 - normalized distance"
-        const centerProx = 1 - distNorm;
-        const pointerProx = 1 - pointerNorm;
-  
-        // Score: overlap matters, but proximity matters more for perceived intent
-        let score =
-          overlapNorm * 0.9 +
-          centerProx * 0.65 +
-          pointerProx * 0.85;
-  
-        // Small contextual bias
-        if (pileType === "foundation") score += 0.06;
-        if (pileType === "tableau") score += 0.04;
-  
-        // Optional: discourage very far targets even with expanded rects
-        if (pointerNorm > 0.98 && overlapNorm < 0.01) score -= 0.25;
-  
-        if (score > bestScore) {
-          bestScore = score;
-          bestTarget = { pile: pileType, index };
-        }
-      }
-  
-      // Hysteresis: keep the previous target unless new target is clearly better
-      const prev = lastBestRef.current;
-      if (prev.target) {
-        const stickiness = pointerType === "touch" ? 0.08 : 0.05;
-        if (bestTarget && bestScore < prev.score + stickiness) {
-          return prev.target;
-        }
-      }
-  
-      // Acceptance threshold
-      const threshold = pointerType === "touch" ? 0.32 : 0.36;
-      if (bestScore < threshold) return null;
-  
-      // Save for hysteresis
-      lastBestRef.current = { target: bestTarget, score: bestScore };
-  
-      return bestTarget;
-    },
-    []
-  );
-  
+
+  // The dragged cards follow the finger by a transform written straight to the
+  // overlay element, so a move costs no render at all.
+  const moveOverlay = useCallback(() => {
+    const press = pressRef.current;
+    const el = overlayRef.current;
+    if (!press || !el) return;
+    el.style.transform = `translate3d(${press.dx}px, ${press.dy}px, 0) scale(1.05)`;
+  }, []);
+
+  const setOverlayElement = useCallback((el: HTMLElement | null) => {
+    overlayRef.current = el;
+    moveOverlay();
+  }, [moveOverlay]);
+
+  const endPress = useCallback(() => {
+    pressRef.current = null;
+    setDrag(null);
+  }, []);
 
   const handlePointerDown = useCallback((
     e: React.PointerEvent,
     cardId: string,
-    fromPile: 'waste' | 'tableau' | 'stock' | 'foundation',
+    fromPile: DragSource,
     fromIndex: number
   ) => {
-    // Stock cards are just tapped, not dragged
-    if (fromPile === 'stock') {
-      options.onTap?.(cardId, fromPile, fromIndex);
-      return;
-    }
+    // One finger at a time: a second touch must not take over the first
+    if (pressRef.current) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
 
     e.preventDefault();
     e.stopPropagation();
-    
-    const target = e.currentTarget as HTMLElement;
-    target.setPointerCapture(e.pointerId);
-    
-    tapStartTimeRef.current = Date.now();
-    tapStartPosRef.current = { x: e.clientX, y: e.clientY };
-    isDraggingRef.current = false;
-    
-    // Get cards to drag
-    const cardIds = options.onDragStart?.(cardId, fromPile, fromIndex) ?? [cardId];
-    if (cardIds.length === 0) {
-      dragRef.current = null;
-      setValidTargets([]);
-      return;
-    }
-    
-    // Get card position for offset calculation
-    const rect = target.getBoundingClientRect();
-    const offsetX = e.clientX - rect.left;
-    const offsetY = e.clientY - rect.top;
-    
-    const dragState: DragState = {
-      cardIds,
+
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    pressRef.current = {
+      pointerId: e.pointerId,
+      cardId,
       fromPile,
       fromIndex,
       startX: e.clientX,
       startY: e.clientY,
-      currentX: e.clientX,
-      currentY: e.clientY,
-      offsetX,
-      offsetY
+      dx: 0,
+      dy: 0,
+      originX: rect.left,
+      originY: rect.top,
+      cardW: rect.width,
+      cardH: rect.height,
+      drag: null,
+      targets: [],
+      piles: [],
     };
-    
-    dragRef.current = dragState;
-    lastBestRef.current = { target: null, score: -Infinity };
-    
-    // Get valid drop targets
-    if (options.getValidDropTargets) {
-      setValidTargets(options.getValidDropTargets(cardId));
-    }
-  }, [options]);
-
-  const handlePointerMove = useCallback((e: React.PointerEvent) => {
-    if (!dragRef.current) return;
-    
-    const dx = e.clientX - tapStartPosRef.current.x;
-    const dy = e.clientY - tapStartPosRef.current.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    
-    // Start dragging if moved more than 10px
-    if (distance > 10) {
-      isDraggingRef.current = true;
-    }
-    
-    if (isDraggingRef.current) {
-      const newDrag = {
-        ...dragRef.current,
-        currentX: e.clientX,
-        currentY: e.clientY,
-      };
-      dragRef.current = newDrag;
-      setDrag(newDrag);
-    }
   }, []);
 
-  const handlePointerUp = useCallback((e: React.PointerEvent) => {
-    const currentDrag = dragRef.current;
-    if (!currentDrag) return;
-    
-    (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-    
-    const tapDuration = Date.now() - tapStartTimeRef.current;
-    const dx = e.clientX - tapStartPosRef.current.x;
-    const dy = e.clientY - tapStartPosRef.current.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    
-    // If it was a quick tap with minimal movement, treat as tap
-    if (tapDuration < 300 && distance < 10) {
-      const cardId = currentDrag.cardIds[0];
-      const now = Date.now();
-      
-      // Check for double-tap (same card, within 400ms)
-      if (
-        lastTapRef.current &&
-        lastTapRef.current.cardId === cardId &&
-        now - lastTapRef.current.time < 400 &&
-        currentDrag.fromPile !== 'foundation'
-      ) {
-        // Double-tap detected
-        lastTapRef.current = null;
-        options.onDoubleTap?.(cardId, currentDrag.fromPile, currentDrag.fromIndex);
-      } else {
-        // Single tap
-        lastTapRef.current = { cardId, time: now };
-        options.onTap?.(cardId, currentDrag.fromPile, currentDrag.fromIndex);
-      }
-    } else if (isDraggingRef.current) {
-      // Calculate the dragged card's current position
-      const deltaX = currentDrag.currentX - currentDrag.startX;
-      const deltaY = currentDrag.currentY - currentDrag.startY;
-      
-      // Get original card rect and calculate new position
-      const originalElement = document.querySelector(`[data-card-id="${currentDrag.cardIds[0]}"]`) as HTMLElement;
-      let dropTarget: { pile: 'foundation' | 'tableau'; index: number } | null = null;
-      
-      if (originalElement) {
-        const originalRect = originalElement.getBoundingClientRect();
-        // Create a virtual rect representing where the card currently is being dragged
-        const draggedRect = new DOMRect(
-          originalRect.left + deltaX,
-          originalRect.top + deltaY,
-          originalRect.width,
-          originalRect.height
-        );
-        const allowed = new Set(validTargets.map(t => `${t.pile}-${t.index}`));
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    const press = pressRef.current;
+    if (!press || e.pointerId !== press.pointerId) return;
 
-        dropTarget = hitTestByOverlap(
-          draggedRect,
-          e.pointerType as any,
-          { x: e.clientX, y: e.clientY },
-          allowed
-        );
-      }
-      
-      // Check if drop target is valid
-      const isValid = dropTarget && validTargets.some(
-        t => t.pile === dropTarget.pile && t.index === dropTarget.index
-      );
-      
-      options.onDragEnd?.(currentDrag, isValid ? dropTarget : null);
+    press.dx = e.clientX - press.startX;
+    press.dy = e.clientY - press.startY;
+
+    if (!press.drag) {
+      if (Math.hypot(press.dx, press.dy) <= DRAG_THRESHOLD_PX) return;
+
+      // The press has become a drag. Read the board once, for this drag.
+      const { onDragStart, getValidDropTargets } = optionsRef.current;
+      const cardIds = onDragStart?.(press.cardId, press.fromPile, press.fromIndex) ?? [press.cardId];
+      press.drag = {
+        cardIds: cardIds.length > 0 ? cardIds : [press.cardId],
+        fromPile: press.fromPile,
+        fromIndex: press.fromIndex,
+        originX: press.originX,
+        originY: press.originY,
+      };
+      press.targets = getValidDropTargets?.(press.cardId) ?? [];
+      press.piles = measurePiles();
+      setDrag(press.drag);
     }
-    lastBestRef.current = { target: null, score: -Infinity };
-    dragRef.current = null;
-    isDraggingRef.current = false;
-    setDrag(null);
-    setValidTargets([]);
-  }, [options, hitTestByOverlap, validTargets]);
+
+    moveOverlay();
+  }, [moveOverlay]);
+
+  const handlePointerUp = useCallback((e: React.PointerEvent) => {
+    const press = pressRef.current;
+    if (!press || e.pointerId !== press.pointerId) return;
+
+    const { onTap, onDoubleTap, onDragEnd } = optionsRef.current;
+
+    if (press.drag) {
+      const dropTarget = pickDropTarget({
+        dragged: {
+          left: press.originX + press.dx,
+          top: press.originY + press.dy,
+          width: press.cardW,
+          height: press.cardH,
+        },
+        pointer: { x: e.clientX, y: e.clientY },
+        pointerType: e.pointerType,
+        piles: press.piles,
+        allowed: press.targets,
+      });
+      endPress();
+      onDragEnd?.(press.drag, dropTarget);
+      return;
+    }
+
+    // The finger never left the card: a tap, however long it rested there
+    endPress();
+    const now = Date.now();
+    const last = lastTapRef.current;
+    if (
+      last &&
+      last.cardId === press.cardId &&
+      now - last.time < DOUBLE_TAP_MS &&
+      press.fromPile !== 'foundation'
+    ) {
+      lastTapRef.current = null;
+      onDoubleTap?.(press.cardId, press.fromPile, press.fromIndex);
+    } else {
+      lastTapRef.current = { cardId: press.cardId, time: now };
+      onTap?.(press.cardId, press.fromPile, press.fromIndex);
+    }
+  }, [endPress]);
 
   const handlePointerCancel = useCallback((e: React.PointerEvent) => {
-    if (dragRef.current) {
-      options.onDragEnd?.(dragRef.current, null);
+    const press = pressRef.current;
+    if (!press || e.pointerId !== press.pointerId) return;
+
+    endPress();
+    if (press.drag) {
+      optionsRef.current.onDragEnd?.(press.drag, null);
     }
-    lastBestRef.current = { target: null, score: -Infinity };
-    dragRef.current = null;
-    isDraggingRef.current = false;
-    setDrag(null);
-    setValidTargets([]);
-  }, [options]);
+  }, [endPress]);
 
   return {
     drag,
-    validTargets,
+    setOverlayElement,
     handlers: {
       onPointerDown: handlePointerDown,
       onPointerMove: handlePointerMove,

@@ -26,7 +26,9 @@ interface GameBoardProps {
   executeMove: (move: Move) => void;
 }
 
-export function GameBoard({
+// Memoised: the board renders when the game, the selection or a drag changes,
+// and never because something around it (the clock, the play limiter) ticked.
+export const GameBoard = React.memo(function GameBoard({
   gameState,
   isSelected,
   getValidDropTargets,
@@ -148,7 +150,7 @@ export function GameBoard({
     }
   }, [allCards, isSelected, onMoveSelectionTo]);
 
-  const { drag, handlers } = usePointer({
+  const { drag, handlers, setOverlayElement } = usePointer({
     onDragStart: handleDragStart,
     onDragEnd: handleDragEnd,
     onTap: handleTap,
@@ -257,7 +259,7 @@ export function GameBoard({
       </div>
 
       {/* Drag overlay */}
-      <DragOverlay drag={drag} cards={draggedCards} />
+      <DragOverlay drag={drag} cards={draggedCards} overlayRef={setOverlayElement} />
     </div>
   );
-}
+});

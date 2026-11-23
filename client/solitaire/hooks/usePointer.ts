@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { pickDropTarget, type DropTarget, type PileBox } from './dropTarget';
 
 type DragSource = 'waste' | 'tableau' | 'foundation';
@@ -83,6 +83,30 @@ export function usePointer(options: UsePointerOptions) {
     pressRef.current = null;
     setDrag(null);
   }, []);
+
+  // The pressed card holds the pointer (Card captures it), so its own handlers
+  // see the release wherever the finger ends up. If the card loses the pointer
+  // anyway (it left the page mid-press), the release would go unseen and every
+  // later press would be refused. The window hears every release, after the
+  // card's handlers have run; a press still open by then is ended here.
+  useEffect(() => {
+    const release = (e: PointerEvent) => {
+      const press = pressRef.current;
+      if (!press || e.pointerId !== press.pointerId) return;
+
+      endPress();
+      if (press.drag) {
+        optionsRef.current.onDragEnd?.(press.drag, null);
+      }
+    };
+
+    window.addEventListener('pointerup', release);
+    window.addEventListener('pointercancel', release);
+    return () => {
+      window.removeEventListener('pointerup', release);
+      window.removeEventListener('pointercancel', release);
+    };
+  }, [endPress]);
 
   const handlePointerDown = useCallback((
     e: React.PointerEvent,

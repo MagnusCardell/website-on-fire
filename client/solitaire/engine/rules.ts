@@ -145,8 +145,32 @@ export function checkWin(state: GameState): boolean {
   return state.foundations.every((f) => f.length === 13);
 }
 
-// Apply a move to the game state (returns new state)
+// A move is legal when the rules offer the same move for this exact board.
+export function matchLegalMove(state: GameState, move: Move): Move | null {
+  return getLegalMoves(state).find((legal) => {
+    if (legal.type !== move.type) return false;
+    if (move.type === 'draw' || move.type === 'recycle') return true;
+    return (
+      legal.from.pile === move.from.pile &&
+      legal.from.index === move.from.index &&
+      legal.to.pile === move.to.pile &&
+      legal.to.index === move.to.index &&
+      legal.cardIds[0] === move.cardIds[0]
+    );
+  }) ?? null;
+}
+
+// Apply a move to the game state (returns new state).
+// A move the rules do not offer for this board leaves the state untouched and
+// returns the same object, so a stale or duplicated input can never corrupt a game.
 export function applyMove(state: GameState, move: Move): GameState {
+  const legal = matchLegalMove(state, move);
+  if (!legal) return state;
+  return applyLegalMove(state, legal);
+}
+
+// Caller guarantees the move came from getLegalMoves(state).
+function applyLegalMove(state: GameState, move: Move): GameState {
   const moveCopy = { ...move };
   const newState: GameState = {
     ...state,
@@ -269,7 +293,7 @@ export function canAutocomplete(state: GameState): boolean {
     const move = getLegalMoves(cursor).find(m => m.to.pile === 'foundation');
     if (!move) return false;
 
-    cursor = applyMove(cursor, move);
+    cursor = applyLegalMove(cursor, move);
   }
 
   return checkWin(cursor);

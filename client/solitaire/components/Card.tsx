@@ -116,9 +116,13 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(({
 
         {/* Center medallion with horse */}
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <div className="relative w-8 h-10 flex items-center justify-center">
+          {/* Sized from the card: 32 by 40 px on a 50 px card, as it always was */}
+          <div
+            className="relative flex items-center justify-center"
+            style={{ width: 'calc(var(--sol-card-w) * 0.64)', height: 'calc(var(--sol-card-w) * 0.8)' }}
+          >
             <div className="absolute inset-0 rounded-[50%] border-[1.5px] border-amber-300/80 shadow-[inset_0_0_8px_rgba(251,191,36,0.3)]" />
-            <HorseSilhouette reduceEffects={reduceEffects} />
+            <HorseSilhouette reduceEffects={reduceEffects} className="w-full h-full" />
           </div>
         </div>
 
@@ -133,13 +137,14 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(({
     );
   }
 
-  // Sized from the card, so the faces stay readable as the cards grow
+  // Sized from the card, so the faces stay readable as the cards grow, and
+  // never taller than the strip a fanned card shows of the one beneath it
   const rankStyle: React.CSSProperties = {
-    fontSize: 'clamp(16px, calc(var(--sol-card-w) * 0.36), 40px)',
+    fontSize: 'max(12px, min(clamp(16px, calc(var(--sol-card-w) * 0.36), 40px), calc(var(--sol-fan-up) - 3px)))',
     lineHeight: 1,
   };
   const pipStyle: React.CSSProperties = {
-    fontSize: 'clamp(14px, calc(var(--sol-card-w) * 0.3), 34px)',
+    fontSize: 'max(11px, min(clamp(14px, calc(var(--sol-card-w) * 0.3), 34px), calc(var(--sol-fan-up) - 6px)))',
     lineHeight: 1,
   };
   const centerStyle: React.CSSProperties = {

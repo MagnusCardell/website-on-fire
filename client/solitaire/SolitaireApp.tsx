@@ -100,6 +100,7 @@ export function SolitaireApp() {
     getValidDropTargets,
     canUndo,
     canAutocomplete,
+    isAutocompleting,
     autocomplete,
     updateElapsedTime,
     persistNow,
@@ -213,6 +214,17 @@ export function SolitaireApp() {
   const handleAutocomplete = useCallback(() => {
     autocomplete(handleBeforeApply, displayMs);
   }, [autocomplete, handleBeforeApply, displayMs]);
+
+  // A run that ends early (a new game was started) must not leave its flying
+  // card on screen or its source card hidden.
+  useEffect(() => {
+    if (isAutocompleting) return;
+    if (flySourceRef.current) {
+      flySourceRef.current.style.visibility = '';
+      flySourceRef.current = null;
+    }
+    setFlyCard(null);
+  }, [isAutocompleting]);
 
   useEffect(() => {
     if (!gameState) return;

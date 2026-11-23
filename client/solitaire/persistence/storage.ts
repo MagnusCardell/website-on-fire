@@ -50,18 +50,26 @@ export async function openDB(): Promise<IDBDatabase> {
   });
 }
 
-export async function saveGame(state: GameState): Promise<void> {
+export interface LoadedGame {
+  state: GameState;
+  // Date key of the daily challenge this game belongs to, null for a normal game.
+  // undefined means the game was saved by a version that did not record it.
+  dailyKey: string | null | undefined;
+}
+
+export async function saveGame(state: GameState, dailyKey: string | null = null): Promise<void> {
   try {
     const database = await openDB();
     return new Promise((resolve, reject) => {
       const transaction = database.transaction([GAME_STORE], 'readwrite');
       const store = transaction.objectStore(GAME_STORE);
 
-      const savedGame: SavedGame & { id: string } = {
+      const savedGame: SavedGame & { id: string; dailyKey: string | null } = {
         id: 'current',
         state,
         stats: { gamesPlayed: 0, wins: 0, losses: 0, currentStreak: 0, bestStreak: 0, totalPlayTime: 0 },
         lastSaved: Date.now(),
+        dailyKey,
       };
 
       const request = store.put(savedGame);
@@ -74,7 +82,7 @@ export async function saveGame(state: GameState): Promise<void> {
   };
 }
 
-export async function loadGame(): Promise<GameState | null> {
+export async function loadGame(): Promise<LoadedGame | null> {
   try {
     const database = await openDB();
 
@@ -85,8 +93,10 @@ export async function loadGame(): Promise<GameState | null> {
 
       request.onerror = () => reject(request.error);
       request.onsuccess = () => {
-        const result = request.result as (SavedGame & { id: string }) | undefined;
-        resolve(result?.state ?? null);
+        const result = request.result as
+          | (SavedGame & { id: string; dailyKey?: string | null })
+          | undefined;
+        resolve(result?.state ? { state: result.state, dailyKey: result.dailyKey } : null);
       };
     });
   } catch {

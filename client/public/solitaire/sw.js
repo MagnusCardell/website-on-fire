@@ -1,103 +1,72 @@
-const CACHE_NAME = 'solitaire-v3';
-const SHELL_ASSETS = [
-  '/solitaire/',
-  '/solitaire/manifest.webmanifest',
-  '/solitaire/icon-192.png',
-  '/solitaire/icon-512.png',
-  // __PRECACHE_ASSETS__
+// Service worker for the solitaire app shell.
+//
+// The build stamps BUILD_ID and PRECACHE (scripts/inject-sw-assets.ts) with every
+// file the page needs. The whole set is cached at install, and the app is then
+// served from that cache alone: a launch never waits on the network, so it works
+// in flight mode and behind a wifi portal. A new build has a new BUILD_ID, is
+// cached as a whole next to the old one, and replaces it on activate.
+//
+// Unstamped (the dev server), the worker installs and stays out of the way.
+const BUILD_ID = 'dev'; // __BUILD_ID__
+const PRECACHE = [
+  // __PRECACHE__
 ];
 
-// Install event - cache shell assets
+const SHELL = '/solitaire/';
+const CACHE_PREFIX = 'solitaire-';
+const CACHE_NAME = CACHE_PREFIX + BUILD_ID;
+const ENABLED = BUILD_ID !== 'dev';
+const PRECACHED_PATHS = new Set(PRECACHE);
+
 self.addEventListener('install', (event) => {
+  if (!ENABLED) {
+    self.skipWaiting();
+    return;
+  }
+
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(SHELL_ASSETS);
-    })
+    caches.open(CACHE_NAME)
+      // 'reload' skips the browser's own cache, so the set is exactly this build
+      .then((cache) => cache.addAll(PRECACHE.map((url) => new Request(url, { cache: 'reload' }))))
+      .then(() => self.skipWaiting())
   );
-  self.skipWaiting();
 });
 
-// Activate event - clean old caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames
-          .filter((name) => name.startsWith('solitaire-') && name !== CACHE_NAME)
+    caches.keys()
+      .then((names) => Promise.all(
+        names
+          .filter((name) => name.startsWith(CACHE_PREFIX) && name !== CACHE_NAME)
           .map((name) => caches.delete(name))
-      );
-    })
+      ))
+      .then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
-// Check if URL should be cached (only /solitaire/** routes)
-function shouldCache(url) {
-  const pathname = new URL(url).pathname;
-  return pathname.startsWith('/solitaire/') || pathname === '/solitaire';
+function fromCache(path) {
+  return caches.open(CACHE_NAME).then((cache) => cache.match(path, { ignoreSearch: true }));
 }
 
-// Fetch event - network first for solitaire routes only
 self.addEventListener('fetch', (event) => {
-  const url = new URL(event.request.url);
-  
-  // Only handle same-origin solitaire requests
-  if (url.origin !== self.location.origin || !shouldCache(url.href)) {
+  if (!ENABLED) return;
+
+  const request = event.request;
+  if (request.method !== 'GET') return;
+
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return;
+
+  // The page itself is always the cached shell
+  if (request.mode === 'navigate') {
+    if (url.pathname === '/solitaire' || url.pathname.startsWith(SHELL)) {
+      event.respondWith(fromCache(SHELL).then((cached) => cached || fetch(request)));
+    }
     return;
   }
 
-  // For navigation requests, use network-first with cache fallback
-  if (event.request.mode === 'navigate') {
-    event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          if (response.status === 200) {
-            const responseClone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, responseClone);
-            });
-          }
-          return response;
-        })
-        .catch(() => caches.match('/solitaire/'))
-    );
-    return;
+  // Everything the shell loads, wherever on the origin it is served from
+  if (PRECACHED_PATHS.has(url.pathname)) {
+    event.respondWith(fromCache(url.pathname).then((cached) => cached || fetch(request)));
   }
-
-  // For assets (js, css, images), use cache-first for hashed bundles
-  const isHashedAsset = /\/assets\/.*\.[a-f0-9]{8,}\.(js|css)$/.test(url.pathname);
-  
-  if (isHashedAsset) {
-    // Cache-first for immutable hashed assets
-    event.respondWith(
-      caches.match(event.request).then((cached) => {
-        if (cached) return cached;
-        return fetch(event.request).then((response) => {
-          if (response.status === 200) {
-            const responseClone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, responseClone);
-            });
-          }
-          return response;
-        });
-      })
-    );
-    return;
-  }
-
-  // Network-first for other solitaire assets
-  event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        if (response.status === 200) {
-          const responseClone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseClone);
-          });
-        }
-        return response;
-      })
-      .catch(() => caches.match(event.request))
-  );
 });

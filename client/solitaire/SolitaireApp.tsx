@@ -10,6 +10,7 @@ import { LimitOverlay } from './components/LimitOverlay';
 import { WinModal } from './components/WinModal';
 import { StatsModal } from './components/StatsModal';
 import { usePlayLimiter } from './limits/usePlayLimiter';
+import { registerServiceWorker } from './pwa';
 import type { Card } from './engine/types';
 
 const AUTOCOMPLETE_ANIM_MS = 320;
@@ -261,12 +262,7 @@ export function SolitaireApp() {
   }, []);
 
   // Register service worker for PWA
-  useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/solitaire/sw.js', { scope: '/solitaire/' })
-        .catch(err => console.log('SW registration failed:', err));
-    }
-  }, []);
+  useEffect(() => registerServiceWorker(), []);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {

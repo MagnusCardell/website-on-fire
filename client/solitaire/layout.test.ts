@@ -35,7 +35,11 @@ function oldCardWidth(viewportWidth: number): number {
 
 // The board area under the header, in each way the game is shown
 const spaces = IPHONES.flatMap(([w, h, top, bottom]) => {
-  const homeScreenHeader = top + FROSTED_BAND_BELOW_STATUS + HEADER;
+  const controlsFrom = topClearance({
+    envTop: top, standalone: true, iosHomeScreen: true, portrait: true,
+    innerHeight: h, screenWidth: w, screenHeight: h, remembered: null,
+  });
+  const homeScreenHeader = controlsFrom + HEADER;
   return [
     { name: `${w}x${h} home screen`, w, space: { width: w, height: h - homeScreenHeader, safeBottom: bottom } },
     // iOS 27.2 can give a Home Screen app a page that is one status area short
@@ -153,6 +157,21 @@ describe('the frosted band iOS lays over a home screen app', () => {
   test('with the system band above the page, the fade below it is still cleared', () => {
     const top = topClearance({ ...phone, envTop: 0, innerHeight: 812, standalone: true, iosHomeScreen: true });
     expect(top).toBe(FROSTED_BAND_BELOW_STATUS);
+  });
+
+  test('a phone with a shorter sensor housing is cleared to the same depth on screen', () => {
+    const small = { screenWidth: 390, screenHeight: 844, portrait: true, remembered: null, standalone: true, iosHomeScreen: true };
+    expect(topClearance({ ...small, envTop: 47, innerHeight: 844 })).toBe(98);
+  });
+
+  test('a phone with a plain status bar gets the fade below its bar', () => {
+    const se = { screenWidth: 375, screenHeight: 667, portrait: true, remembered: null, standalone: true, iosHomeScreen: true };
+    expect(topClearance({ ...se, envTop: 20, innerHeight: 667 })).toBe(20 + FROSTED_BAND_BELOW_STATUS);
+  });
+
+  test('a taller status area than measured still gets the full fade below it', () => {
+    const air = { screenWidth: 420, screenHeight: 912, portrait: true, remembered: null, standalone: true, iosHomeScreen: true };
+    expect(topClearance({ ...air, envTop: 68, innerHeight: 912 })).toBe(68 + FROSTED_BAND_BELOW_STATUS);
   });
 
   test('no band outside an iOS home screen app', () => {

@@ -126,7 +126,15 @@ export function statusBarHeightFor(screenWidth: number, screenHeight: number): n
 // on iOS 27.2 with a 62 pt status area: a stripe pattern is 10% sharp at
 // 66 pt, 51% at 84 pt, 97% at 96 pt and untouched from 100 pt.
 // Controls placed in that fade look out of focus, so they start below it.
+//
+// That one measurement can be read two ways: the fade is 36 pt deep under
+// whatever status area the phone has, or the band ends 98 pt from the top of
+// the screen. Phones with a sensor housing get the larger of the two; a few
+// points of extra header cost nothing, a header in the blur is the bug.
 export const FROSTED_BAND_BELOW_STATUS = 36;
+export const FROSTED_BAND_END = 98;
+// Status areas at least this tall belong to phones with a sensor housing
+const HOUSING_STATUS_AREA = 44;
 
 // How much of the page's top belongs to the system's status area.
 //
@@ -147,6 +155,16 @@ export function statusAreaHeight(input: TopInsetInput): number {
 // How far the header's controls must stay from the top of the page: clear of
 // the status area and, in an iOS Home Screen app, of the frosted band under it.
 export function topClearance(input: TopInsetInput): number {
-  const frostedBand = input.iosHomeScreen && input.portrait ? FROSTED_BAND_BELOW_STATUS : 0;
-  return statusAreaHeight(input) + frostedBand;
+  const statusArea = statusAreaHeight(input);
+  if (!input.iosHomeScreen || !input.portrait) return statusArea;
+
+  // Where the page begins on the screen: at the very top, under the status
+  // bar, or below a band the system keeps for itself
+  const pageTop = statusArea > 0 ? 0 : Math.max(0, input.screenHeight - input.innerHeight);
+  const statusBottom = pageTop + statusArea;
+
+  let bandEnd = statusBottom + FROSTED_BAND_BELOW_STATUS;
+  if (statusBottom >= HOUSING_STATUS_AREA) bandEnd = Math.max(bandEnd, FROSTED_BAND_END);
+
+  return bandEnd - pageTop;
 }

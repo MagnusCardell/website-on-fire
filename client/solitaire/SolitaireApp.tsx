@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useGame } from './hooks/useGame';
-import { useGameTimer } from './hooks/useGameTimer';
 import { useLayoutVars } from './hooks/useLayoutVars';
 import { GameBoard } from './components/GameBoard';
 import { Card as CardComponent } from './components/Card';
@@ -103,7 +102,9 @@ export function SolitaireApp() {
     canAutocomplete,
     isAutocompleting,
     autocomplete,
-    updateElapsedTime,
+    gameId,
+    clock,
+    isPlaying,
     persistNow,
   } = useGame({
     limiter: limiter.controls,
@@ -119,12 +120,6 @@ export function SolitaireApp() {
   // Track the source element so we can restore visibility if needed
   const flySourceRef = useRef<HTMLElement | null>(null);
 
-  const { displaySeconds, displayMs } = useGameTimer({
-    gameState,
-    onElapsedChange: updateElapsedTime,
-    onPersistRequest: persistNow,
-  });
-  const activeSyncMs = Math.floor(displayMs / 1000) * 1000;
   const showLimitStatus = limiter.snapshot.promptDue || limiter.snapshot.longSessionActive;
 
   const handleNewGame = useCallback(() => {
@@ -133,14 +128,14 @@ export function SolitaireApp() {
       return;
     }
 
-    newGame(displayMs);
-  }, [newGame, displayMs, limiter.snapshot.promptDue]);
+    newGame();
+  }, [newGame, limiter.snapshot.promptDue]);
 
   const startPromptedNewGame = useCallback(() => {
     setShowLimitPrompt(false);
     setStoppedForNow(false);
-    newGame(displayMs);
-  }, [newGame, displayMs]);
+    newGame();
+  }, [newGame]);
 
   const handleStopForNow = useCallback(() => {
     persistNow();
@@ -155,31 +150,8 @@ export function SolitaireApp() {
     setShowLimitPrompt(false);
     setShowLongSessionSetup(false);
     setStoppedForNow(false);
-    newGame(displayMs);
-  }, [displayMs, limiter, newGame]);
-
-  const handleStartDailyChallenge = useCallback(() => {
-    startDailyChallenge(displayMs);
-  }, [startDailyChallenge, displayMs]);
-
-  const handleUndo = useCallback(() => {
-    undo(displayMs);
-  }, [undo, displayMs]);
-
-  const handleDrawFromStock = useCallback(() => {
-    drawFromStock(displayMs);
-  }, [drawFromStock, displayMs]);
-
-  const handleMoveSelectionTo = useCallback((
-    toPile: 'foundation' | 'tableau',
-    toIndex: number
-  ) => {
-    return moveSelectionTo(toPile, toIndex, displayMs);
-  }, [moveSelectionTo, displayMs]);
-
-  const handleExecuteMove = useCallback((move: Parameters<typeof executeMove>[0]) => {
-    executeMove(move, displayMs);
-  }, [executeMove, displayMs]);
+    newGame();
+  }, [limiter, newGame]);
 
   const handleBeforeApply = useCallback((card: Card, foundationIndex: number, done: () => void) => {
     const sourceEl = document.querySelector(`[data-card-id="${card.id}"]`) as HTMLElement | null;
@@ -213,8 +185,8 @@ export function SolitaireApp() {
   }, []);
 
   const handleAutocomplete = useCallback(() => {
-    autocomplete(handleBeforeApply, displayMs);
-  }, [autocomplete, handleBeforeApply, displayMs]);
+    autocomplete(handleBeforeApply);
+  }, [autocomplete, handleBeforeApply]);
 
   // A run that ends early (a new game was started) must not leave its flying
   // card on screen or its source card hidden.
@@ -227,15 +199,23 @@ export function SolitaireApp() {
     setFlyCard(null);
   }, [isAutocompleting]);
 
+  // Tell the play limiter how long this game has been played, once a second
+  const gameSeed = gameState?.seed;
+  const syncActiveGame = limiter.syncActiveGame;
   useEffect(() => {
-    if (!gameState) return;
+    if (gameSeed === undefined) return;
 
-    limiter.syncActiveGame(
-      String(gameState.seed),
-      activeSyncMs,
+    const sync = () => syncActiveGame(
+      String(gameSeed),
+      Math.floor(clock.getElapsedMs() / 1000) * 1000,
       isPlayingDaily ? 'daily' : 'normal'
     );
-  }, [activeSyncMs, gameState?.seed, isPlayingDaily, limiter.syncActiveGame]);
+    sync();
+    if (!isPlaying) return;
+
+    const interval = setInterval(sync, 1_000);
+    return () => clearInterval(interval);
+  }, [clock, gameId, gameSeed, isPlaying, isPlayingDaily, syncActiveGame]);
 
   // Prevent overscroll/bounce on iOS
   useEffect(() => {
@@ -339,11 +319,13 @@ export function SolitaireApp() {
       <Header
         moveCount={gameState.moveCount}
         canUndo={canUndo}
-        onUndo={handleUndo}
+        onUndo={undo}
         onNewGame={handleNewGame}
         onShowStats={() => setShowStats(true)}
-        elapsedTime={displaySeconds}
-        onStartDaily={handleStartDailyChallenge}
+        clock={clock}
+        gameId={gameId}
+        clockRunning={isPlaying}
+        onStartDaily={startDailyChallenge}
         isPlayingDaily={isPlayingDaily}
         limitStatus={showLimitStatus
           ? {
@@ -359,12 +341,12 @@ export function SolitaireApp() {
           gameState={gameState}
           isSelected={isSelected}
           getValidDropTargets={getValidDropTargets}
-          onDrawFromStock={handleDrawFromStock}
+          onDrawFromStock={drawFromStock}
           onSelectCard={selectCard}
-          onMoveSelectionTo={handleMoveSelectionTo}
+          onMoveSelectionTo={moveSelectionTo}
           onClearSelection={clearSelection}
           findLegalMove={findLegalMove}
-          executeMove={handleExecuteMove}
+          executeMove={executeMove}
         />
 
         {/* Autocomplete button — floats over the board, no layout shift */}
@@ -407,7 +389,7 @@ export function SolitaireApp() {
       <WinModal
         isOpen={showWinModal}
         stats={stats}
-        gameTime={displaySeconds}
+        gameTime={Math.floor(gameState.elapsedActiveMs / 1000)}
         moveCount={gameState.moveCount}
         foundations={gameState.foundations}
         onNewGame={() => {

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import type { GameState, GameStats, Move, Card } from '../engine/types';
 import { createNewGame } from '../engine/game';
 import { applyMove, undoMove, getLegalMoves, canAutocomplete } from '../engine/rules';
@@ -6,6 +6,7 @@ import { saveGame, loadGame, clearGame, loadStats, recordWin, recordLoss } from 
 import { getSeed, getKey, getLegacyDailySeed } from '../engine/solvableSeeds';
 import { recordDailyCompletion, isDailyCompleted } from '../persistence/dailyChallenge';
 import type { PlayLimiterControls } from '../limits/types';
+import { useGameClock } from './useGameClock';
 
 interface Selection {
   cardIds: string[];
@@ -27,9 +28,12 @@ export function useGame({ limiter, longSessionActive = false }: UseGameOptions =
   // Date key of the daily challenge on the board, null for a normal game
   const [dailyKey, setDailyKeyState] = useState<string | null>(null);
   const [isAutocompleting, setIsAutocompleting] = useState(false);
+  // Goes up by one each time a different game is put on the board
+  const [gameId, setGameId] = useState(0);
 
   // Every action reads the board from these refs, never from the render it was
-  // created in, so two inputs in a row always see each other's result.
+  // created in, so two inputs in a row always see each other's result, and the
+  // callbacks below keep the same identity for the life of the component.
   const stateRef = useRef<GameState | null>(null);
   const selectionRef = useRef<Selection | null>(null);
   const dailyKeyRef = useRef<string | null>(null);
@@ -50,6 +54,13 @@ export function useGame({ limiter, longSessionActive = false }: UseGameOptions =
     setGameState(next);
   }, []);
 
+  // Put a different game on the board
+  const deal = useCallback((next: GameState) => {
+    winBookedRef.current = false;
+    commit(next);
+    setGameId(id => id + 1);
+  }, [commit]);
+
   const select = useCallback((next: Selection | null) => {
     selectionRef.current = next;
     setSelection(next);
@@ -64,6 +75,23 @@ export function useGame({ limiter, longSessionActive = false }: UseGameOptions =
     saveGame(state, dailyKeyRef.current);
   }, []);
 
+  // Store the play time with the game and save it (the page is going away)
+  const saveElapsed = useCallback((elapsedMs: number) => {
+    const current = stateRef.current;
+    if (!current || current.gameStatus !== 'playing') return;
+    const next = { ...current, elapsedActiveMs: elapsedMs };
+    commit(next);
+    persist(next);
+  }, [commit, persist]);
+
+  const isPlaying = !isLoading && gameState?.gameStatus === 'playing';
+  const clock = useGameClock({
+    gameId,
+    baseMs: gameState?.elapsedActiveMs ?? 0,
+    running: isPlaying,
+    onPause: saveElapsed,
+  });
+
   // Load game on mount
   useEffect(() => {
     let cancelled = false;
@@ -76,7 +104,6 @@ export function useGame({ limiter, longSessionActive = false }: UseGameOptions =
       if (cancelled) return;
 
       if (saved && saved.state.gameStatus === 'playing') {
-        commit(saved.state);
         const todayKey = getKey(new Date());
         if (saved.dailyKey !== undefined) {
           setDailyKey(saved.dailyKey);
@@ -84,8 +111,9 @@ export function useGame({ limiter, longSessionActive = false }: UseGameOptions =
           // Saved before games recorded their own daily date
           setDailyKey(todayKey);
         }
+        deal(saved.state);
       } else {
-        commit(createNewGame());
+        deal(createNewGame());
       }
       setStats(savedStats);
       setIsLoading(false);
@@ -96,7 +124,7 @@ export function useGame({ limiter, longSessionActive = false }: UseGameOptions =
       cancelled = true;
       autoRunRef.current = null;
     };
-  }, [commit, setDailyKey]);
+  }, [deal, setDailyKey]);
 
   // Count the game on the board as won, once
   const bookWin = useCallback(async (state: GameState, finalElapsedMs: number, showModal: boolean) => {
@@ -161,39 +189,38 @@ export function useGame({ limiter, longSessionActive = false }: UseGameOptions =
   }, [commit, bookWin]);
 
   // A game left unfinished counts as a loss (but not a daily challenge)
-  const bookAbandonedGame = useCallback(async (currentElapsedMs?: number) => {
+  const bookAbandonedGame = useCallback(async () => {
     const current = stateRef.current;
     if (!current || current.gameStatus !== 'playing' || current.moveCount === 0) return;
     if (dailyKeyRef.current !== null) return;
 
-    const activeMs = currentElapsedMs ?? current.elapsedActiveMs;
+    const activeMs = clock.getElapsedMs();
     limiterRef.current?.recordGameAbandoned(activeMs);
     if (!longSessionRef.current) {
       const newStats = await recordLoss(Math.floor(activeMs / 1000));
       setStats(newStats);
     }
-  }, []);
+  }, [clock]);
 
   // Start new game
-  const newGame = useCallback(async (currentElapsedMs?: number) => {
+  const newGame = useCallback(async () => {
     const lim = limiterRef.current;
     if (lim && !lim.canStartGame('normal')) return;
 
     await settleAutocomplete();
-    await bookAbandonedGame(currentElapsedMs);
+    await bookAbandonedGame();
 
     const state = createNewGame();
-    winBookedRef.current = false;
     lim?.recordGameStarted('normal');
     setDailyKey(null);
-    commit(state);
+    deal(state);
     select(null);
     setShowWinModal(false);
     persist(state);
-  }, [settleAutocomplete, bookAbandonedGame, setDailyKey, commit, select, persist]);
+  }, [settleAutocomplete, bookAbandonedGame, setDailyKey, deal, select, persist]);
 
   // Start daily challenge
-  const startDailyChallenge = useCallback(async (currentElapsedMs?: number) => {
+  const startDailyChallenge = useCallback(async () => {
     const lim = limiterRef.current;
     if (lim && !lim.canStartGame('daily')) return;
 
@@ -204,20 +231,19 @@ export function useGame({ limiter, longSessionActive = false }: UseGameOptions =
     const key = getKey(today);
     if (await isDailyCompleted(key)) return;
 
-    await bookAbandonedGame(currentElapsedMs);
+    await bookAbandonedGame();
 
     const state = createNewGame(getSeed(today));
-    winBookedRef.current = false;
     lim?.recordGameStarted('daily');
     setDailyKey(key);
-    commit(state);
+    deal(state);
     select(null);
     setShowWinModal(false);
     persist(state);
-  }, [settleAutocomplete, bookAbandonedGame, setDailyKey, commit, select, persist]);
+  }, [settleAutocomplete, bookAbandonedGame, setDailyKey, deal, select, persist]);
 
   // Execute a move
-  const executeMove = useCallback((move: Move, currentElapsedMs?: number) => {
+  const executeMove = useCallback((move: Move) => {
     const current = stateRef.current;
     if (!current || current.gameStatus !== 'playing') return;
     if (autoRunRef.current !== null) return;
@@ -227,10 +253,7 @@ export function useGame({ limiter, longSessionActive = false }: UseGameOptions =
     const next = applyMove(current, move);
     if (next === current) return; // not a legal move on this board
 
-    // Update elapsed time if provided
-    if (currentElapsedMs !== undefined) {
-      next.elapsedActiveMs = currentElapsedMs;
-    }
+    next.elapsedActiveMs = clock.getElapsedMs();
     lim?.recordMove({
       prev: current,
       move,
@@ -246,10 +269,10 @@ export function useGame({ limiter, longSessionActive = false }: UseGameOptions =
     } else {
       persist(next);
     }
-  }, [commit, select, persist, bookWin]);
+  }, [clock, commit, select, persist, bookWin]);
 
   // Undo last move
-  const undo = useCallback((currentElapsedMs?: number) => {
+  const undo = useCallback(() => {
     const current = stateRef.current;
     if (!current || current.gameStatus !== 'playing') return;
     if (autoRunRef.current !== null) return;
@@ -258,22 +281,23 @@ export function useGame({ limiter, longSessionActive = false }: UseGameOptions =
 
     const next = undoMove(current);
     if (next) {
-      lim?.recordUndo(currentElapsedMs ?? next.elapsedActiveMs);
+      next.elapsedActiveMs = clock.getElapsedMs();
+      lim?.recordUndo(next.elapsedActiveMs);
       commit(next);
       select(null);
       persist(next);
     }
-  }, [commit, select, persist]);
+  }, [clock, commit, select, persist]);
 
   // Draw from stock
-  const drawFromStock = useCallback((currentElapsedMs?: number) => {
+  const drawFromStock = useCallback(() => {
     const current = stateRef.current;
     if (!current) return;
 
     const legalMoves = getLegalMoves(current);
     const move = legalMoves.find(m => m.type === 'draw') ?? legalMoves.find(m => m.type === 'recycle');
     if (move) {
-      executeMove(move, currentElapsedMs);
+      executeMove(move);
     }
   }, [executeMove]);
 
@@ -308,7 +332,7 @@ export function useGame({ limiter, longSessionActive = false }: UseGameOptions =
   }, [select]);
 
   // Try to move selection to a target pile
-  const moveSelectionTo = useCallback((toPile: 'foundation' | 'tableau', toIndex: number, currentElapsedMs?: number) => {
+  const moveSelectionTo = useCallback((toPile: 'foundation' | 'tableau', toIndex: number) => {
     const current = stateRef.current;
     const selected = selectionRef.current;
     if (!current || !selected) return false;
@@ -324,7 +348,7 @@ export function useGame({ limiter, longSessionActive = false }: UseGameOptions =
     );
 
     if (move) {
-      executeMove(move, currentElapsedMs);
+      executeMove(move);
       return true;
     }
 
@@ -374,20 +398,12 @@ export function useGame({ limiter, longSessionActive = false }: UseGameOptions =
       .map(m => ({ pile: m.to.pile as 'foundation' | 'tableau', index: m.to.index }));
   }, []);
 
-  // Update elapsed time (called by timer hook)
-  const updateElapsedTime = useCallback((elapsedMs: number) => {
-    const current = stateRef.current;
-    if (!current) return;
-    commit({ ...current, elapsedActiveMs: elapsedMs });
-  }, [commit]);
-
   // Autocomplete: animate all remaining cards to foundations.
   // beforeApply: optional hook called with the card and a done() callback;
   // done() commits the move. If omitted, applies immediately with a 180ms delay.
   // Only one run can be in flight, and no other input reaches the board until it ends.
   const autocomplete = useCallback((
-    beforeApply?: (card: Card, foundationIndex: number, done: () => void) => void,
-    currentElapsedMs?: number
+    beforeApply?: (card: Card, foundationIndex: number, done: () => void) => void
   ) => {
     const start = stateRef.current;
     if (!start || start.gameStatus !== 'playing') return;
@@ -397,7 +413,7 @@ export function useGame({ limiter, longSessionActive = false }: UseGameOptions =
     if (lim && !lim.canMakeMove()) return;
 
     const runId = ++autoRunCounterRef.current;
-    const activeMs = currentElapsedMs ?? start.elapsedActiveMs;
+    const activeMs = clock.getElapsedMs();
     autoRunRef.current = runId;
     autoElapsedRef.current = activeMs;
     setIsAutocompleting(true);
@@ -458,18 +474,22 @@ export function useGame({ limiter, longSessionActive = false }: UseGameOptions =
     }
 
     step();
-  }, [commit, select, persist, bookWin, endAutocompleteRun]);
+  }, [clock, commit, select, persist, bookWin, endAutocompleteRun]);
 
-  // Persist immediately (called on visibility change)
+  // Save the game as it stands, with its play time
   const persistNow = useCallback(() => {
-    const current = stateRef.current;
-    if (current && current.gameStatus === 'playing') {
-      persist(current);
-    }
-  }, [persist]);
+    saveElapsed(clock.getElapsedMs());
+  }, [clock, saveElapsed]);
+
+  // Working this out plays the rest of the game through, so only when the board changes
+  const autocompleteReady = useMemo(
+    () => gameState?.gameStatus === 'playing' && canAutocomplete(gameState),
+    [gameState]
+  );
 
   return {
     gameState,
+    gameId,
     stats,
     selection,
     isLoading,
@@ -488,10 +508,11 @@ export function useGame({ limiter, longSessionActive = false }: UseGameOptions =
     isSelected,
     getValidDropTargets,
     canUndo: (gameState?.moveHistory.length ?? 0) > 0 && gameState?.gameStatus === 'playing' && !isAutocompleting,
-    canAutocomplete: gameState?.gameStatus === 'playing' && !isAutocompleting && canAutocomplete(gameState),
+    canAutocomplete: autocompleteReady && !isAutocompleting,
     isAutocompleting,
     autocomplete,
-    updateElapsedTime,
+    clock,
+    isPlaying,
     persistNow,
   };
 }

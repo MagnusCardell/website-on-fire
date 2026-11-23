@@ -4,6 +4,8 @@ import { cn } from '../lib/utils';
 import { DailyCalendarModal } from './DailyCalendarModal';
 import { getCrownCount, isDailyCompleted } from '../persistence/dailyChallenge';
 import { getKey } from '../engine/solvableSeeds';
+import { Clock } from './Clock';
+import type { GameClock } from '../hooks/useGameClock';
 
 interface HeaderProps {
   moveCount: number;
@@ -11,7 +13,9 @@ interface HeaderProps {
   onUndo: () => void;
   onNewGame: () => void;
   onShowStats: () => void;
-  elapsedTime: number;
+  clock: GameClock;
+  gameId: number;
+  clockRunning: boolean;
   onStartDaily: () => void;
   isPlayingDaily: boolean;
   limitStatus?: {
@@ -19,12 +23,6 @@ interface HeaderProps {
     tone: 'green' | 'amber' | 'red' | 'blue';
     onClick: () => void;
   };
-}
-
-function formatTime(seconds: number): string {
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
 function formatMoveCount(moveCount: number): string {
@@ -37,7 +35,9 @@ export function Header({
   onUndo,
   onNewGame,
   onShowStats,
-  elapsedTime,
+  clock,
+  gameId,
+  clockRunning,
   onStartDaily,
   isPlayingDaily,
   limitStatus,
@@ -118,7 +118,7 @@ export function Header({
             className='h-8 min-w-[5.3rem] flex items-center justify-center gap-1 rounded-lg border border-white/10 bg-black/15 px-2 hover:bg-white/10 transition-colors'
             aria-label='Daily challenge calendar'
           >
-            {formatTime(elapsedTime)}
+            <Clock clock={clock} gameId={gameId} running={clockRunning} />
             <Crown className='w-4 h-4 text-gray-400' />
             <span className='text-gray-400 text-sm font-medium tabular-nums'>{crownCount} </span>
           </button>

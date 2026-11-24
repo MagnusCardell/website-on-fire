@@ -47,6 +47,11 @@ app.use((_req, res, next) => {
   const distPath = path.resolve(__dirname, "../dist/public");
   app.use(express.static(distPath));
 
+  // Anything that matched no file gets the site's own not-found page
+  app.use((_req, res) => {
+    res.status(404).sendFile(path.join(distPath, "404.html"));
+  });
+
   const port = process.env.PORT ?? 5000;
   server.listen({
     port,

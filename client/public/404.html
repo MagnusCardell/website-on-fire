@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <title>Not found · Magnus Cardell</title>
+    <link rel="icon" href="/favicon.ico" type="image/x-icon" />
+    <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500&family=Ubuntu+Mono&display=swap" rel="stylesheet">
+    <style>
+      * { box-sizing: border-box; }
+      html { background: hsl(317 100% 9%); }
+      body {
+        min-height: 100vh;
+        min-height: 100dvh;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+        color: #fff;
+        font-family: 'Ubuntu', sans-serif;
+      }
+      .window {
+        width: min(640px, 100%);
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.3);
+      }
+      .bar {
+        position: relative;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0 8px;
+        background: #1f2937;
+        font-size: 14px;
+        font-weight: 500;
+      }
+      .dot { width: 12px; height: 12px; border-radius: 50%; }
+      .title { position: absolute; left: 0; right: 0; text-align: center; pointer-events: none; }
+      .screen {
+        padding: 16px;
+        background: hsl(270 60% 11%);
+        font-family: 'Ubuntu Mono', ui-monospace, monospace;
+        font-size: 15px;
+        line-height: 1.5;
+        overflow-wrap: anywhere;
+      }
+      .screen p { margin: 0; }
+      .offscreen { position: absolute; left: -9999px; }
+      .gap { margin-top: 1.5em !important; }
+      .cyan { color: #22d3ee; }
+      .yellow { color: #facc15; }
+      .green { color: #4ade80; }
+      .dim { color: #9ca3af; }
+      a { color: #22d3ee; }
+      a:focus-visible { outline: 2px solid #22d3ee; outline-offset: 2px; }
+    </style>
+  </head>
+  <body>
+    <main class="window">
+      <div class="bar" aria-hidden="true">
+        <span class="dot" style="background:#ef4444"></span>
+        <span class="dot" style="background:#eab308"></span>
+        <span class="dot" style="background:#22c55e"></span>
+        <span class="title">guest@mcardell: ~/</span>
+      </div>
+      <div class="screen">
+        <h1 class="offscreen">Page not found</h1>
+        <p><span class="cyan">guest</span>@<span class="yellow">mcardell</span> <span class="green">~</span> <span class="cyan">→</span> cat <span id="path">this-page</span></p>
+        <p>cat: <span id="path-again">this-page</span>: No such file or directory</p>
+        <p class="gap dim">Nothing lives at this address.</p>
+        <p class="gap"><span class="cyan">guest</span>@<span class="yellow">mcardell</span> <span class="green">~</span> <span class="cyan">→</span> <a href="/">cd ~</a> <span class="dim">(back to the desktop)</span></p>
+      </div>
+    </main>
+    <script>
+      // The address is shown as text: textContent never reads it as markup
+      var path = location.pathname;
+      try { path = decodeURIComponent(path); } catch (e) {}
+      document.getElementById('path').textContent = path;
+      document.getElementById('path-again').textContent = path;
+    </script>
+  </body>
+</html>

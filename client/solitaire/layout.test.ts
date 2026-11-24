@@ -1,6 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 import {
+  FACE_BORDER,
   FROSTED_BAND_BELOW_STATUS,
+  RANK_GLYPH_WIDTH,
+  RANK_INSET,
   computeBoardLayout,
   longestColumnBottom,
   statusAreaHeight,
@@ -90,10 +93,60 @@ describe('board layout', () => {
   });
 
   test('the waste stays inside the empty third column', () => {
-    for (const { space } of spaces) {
+    for (const { space } of [...spaces, ...narrow, ...wide]) {
       const l = computeBoardLayout(space);
       expect(l.wasteOffset * 2).toBeLessThanOrEqual(l.cardW + l.gap);
     }
+  });
+});
+
+// An iPhone with Display Zoom on is 320 pt wide; the desktop site and an iPad are far wider
+const narrow = [
+  { name: '320x568 safari tab', space: { width: 320, height: 568 - 20 - HEADER - SAFARI_BARS, safeBottom: 0 } },
+  { name: '320x693 home screen', space: { width: 320, height: 693 - 98 - HEADER, safeBottom: 34 } },
+];
+const wide = [
+  { name: '1026x606 desktop window', space: { width: 1026, height: 606 - HEADER, safeBottom: 0 } },
+  { name: '1280x720 desktop', space: { width: 1280, height: 720 - HEADER, safeBottom: 0 } },
+  { name: '820x1180 tablet', space: { width: 820, height: 1180 - 24 - HEADER, safeBottom: 20 } },
+];
+
+describe('card faces', () => {
+  const everywhere = [...spaces, ...narrow, ...wide];
+
+  test('a covered card in a column shows its corner row and none of its centre suit', () => {
+    for (const { name, space } of everywhere) {
+      const l = computeBoardLayout(space);
+      expect({
+        name,
+        // The next card covers everything from fanUp down. The suit is centred on the card.
+        centreBelowStrip: (l.cardH - l.centerSize) / 2 >= l.fanUp && l.centerTop >= l.fanUp,
+        centreAboveBottomRow: (l.cardH + l.centerSize) / 2 <= l.cardH - FACE_BORDER - l.rankSize,
+        cornerRowInsideStrip: l.rankSize <= l.fanUp && l.pipSize <= l.fanUp,
+      }).toEqual({ name, centreBelowStrip: true, centreAboveBottomRow: true, cornerRowInsideStrip: true });
+    }
+  });
+
+  test('the centre suit stays large enough to read', () => {
+    for (const { name, space } of everywhere) {
+      const l = computeBoardLayout(space);
+      expect({ name, readable: l.centerSize >= 14 }).toEqual({ name, readable: true });
+    }
+  });
+
+  test('a covered card in the waste shows its whole rank', () => {
+    for (const { name, space } of everywhere) {
+      const l = computeBoardLayout(space);
+      const rankEnds = RANK_INSET + l.rankSize * RANK_GLYPH_WIDTH;
+      expect({ name, shown: l.wasteOffset >= rankEnds }).toEqual({ name, shown: true });
+    }
+  });
+
+  test('on a phone the fan is held back by the suit, not by the room (the bug this guards)', () => {
+    const l = computeBoardLayout({ width: 402, height: 874 - 98 - HEADER, safeBottom: 34 });
+    // A fan of 0.4 of the card would fit the screen, and would uncover the top of the suit
+    expect(Math.round(l.cardH * 0.4)).toBeGreaterThan(l.centerTop);
+    expect(l.fanUp).toBe(l.centerTop);
   });
 });
 

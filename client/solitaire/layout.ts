@@ -24,6 +24,12 @@ export interface BoardLayout {
   fanUp: number;
   fanDown: number;
   wasteOffset: number;
+  // What is printed on a card face: font sizes, and how far below the card's
+  // top edge the suit in the middle begins
+  rankSize: number;
+  pipSize: number;
+  centerSize: number;
+  centerTop: number;
 }
 
 const CARD_RATIO = 1.4;
@@ -38,6 +44,12 @@ const FAN_DOWN = 0.12;
 const FAN_UP = 0.4;
 // The tightest face-up fan that still shows rank and suit
 const FAN_UP_MIN = 0.24;
+// A card face is drawn inside a border this wide
+export const FACE_BORDER = 1;
+// The rank sits this far from the card's left edge (Tailwind left-1.5) and a
+// bold capital or digit is about this wide, as a share of its font size
+export const RANK_INSET = 6;
+export const RANK_GLYPH_WIDTH = 0.72;
 // The longest column the game can produce: 6 face-down cards under 13 face-up
 const LONGEST_FACE_DOWN = 6;
 const LONGEST_FACE_UP_FANS = 12;
@@ -61,13 +73,32 @@ export function computeBoardLayout({ width, height, safeBottom }: BoardSpace): B
   // itself and is easier to touch, but never so far that the longest runs off
   const fanDown = Math.max(3, Math.round(cardH * FAN_DOWN));
   const fanFit = Math.floor((room - cardH * 2 - fanDown * LONGEST_FACE_DOWN) / LONGEST_FACE_UP_FANS);
-  const fanUp = Math.max(4, Math.min(Math.round(cardH * FAN_UP), fanFit));
 
-  // The waste shows three cards side by side and may spill into the empty
-  // third column, but not past it
-  const wasteOffset = Math.min(clamp(Math.round(cardW * 0.34), 10, 40), Math.floor((cardW + gap) / 2));
+  // The large suit in the middle of a card face, and where it begins. A covered
+  // card must show its corner row and nothing of that suit, so the strip a
+  // fanned card shows stops above it. (A fan of 0.4 of the card on a phone
+  // reached past it, and the top of the suit showed under every covered card.)
+  const centerSize = clamp(Math.round(cardW * 0.5), 16, 56);
+  const centerTop = Math.floor((cardH - centerSize) / 2);
+  const fanUp = Math.max(4, Math.min(Math.round(cardH * FAN_UP), fanFit, centerTop));
 
-  return { cardW, cardH, gap, padX, padTop: PAD_TOP, rowGap: ROW_GAP, fanUp, fanDown, wasteOffset };
+  // A covered card shows a strip of itself: fanUp high in a column, wasteOffset
+  // wide in the waste. The rank and the corner suit are sized to fit that strip.
+  const rankSize = Math.max(12, Math.min(clamp(Math.round(cardW * 0.36), 16, 40), fanUp - 3));
+  const pipSize = Math.max(11, Math.min(clamp(Math.round(cardW * 0.3), 14, 34), fanUp - 6));
+
+  // The waste shows three cards side by side, each far enough from the next to
+  // show its whole rank. It may spill into the empty third column, not past it.
+  const rankWidth = RANK_INSET + Math.round(rankSize * RANK_GLYPH_WIDTH) + 1;
+  const wasteOffset = Math.min(
+    Math.max(clamp(Math.round(cardW * 0.34), 10, 40), rankWidth),
+    Math.floor((cardW + gap) / 2)
+  );
+
+  return {
+    cardW, cardH, gap, padX, padTop: PAD_TOP, rowGap: ROW_GAP, fanUp, fanDown, wasteOffset,
+    rankSize, pipSize, centerTop, centerSize,
+  };
 }
 
 // Where the longest possible column ends, measured from the top of the board area

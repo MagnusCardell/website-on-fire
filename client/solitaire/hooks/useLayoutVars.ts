@@ -80,6 +80,9 @@ export function useLayoutVars(board: HTMLElement | null) {
       root.style.setProperty('--sol-waste-offset', `${layout.wasteOffset}px`);
       root.style.setProperty('--sol-fan-up', `${layout.fanUp}px`);
       root.style.setProperty('--sol-fan-down', `${layout.fanDown}px`);
+      root.style.setProperty('--sol-rank', `${layout.rankSize}px`);
+      root.style.setProperty('--sol-pip', `${layout.pipSize}px`);
+      root.style.setProperty('--sol-center', `${layout.centerSize}px`);
     };
 
     apply();

@@ -137,20 +137,11 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(({
     );
   }
 
-  // Sized from the card, so the faces stay readable as the cards grow, and
-  // never taller than the strip a fanned card shows of the one beneath it
-  const rankStyle: React.CSSProperties = {
-    fontSize: 'max(12px, min(clamp(16px, calc(var(--sol-card-w) * 0.36), 40px), calc(var(--sol-fan-up) - 3px)))',
-    lineHeight: 1,
-  };
-  const pipStyle: React.CSSProperties = {
-    fontSize: 'max(11px, min(clamp(14px, calc(var(--sol-card-w) * 0.3), 34px), calc(var(--sol-fan-up) - 6px)))',
-    lineHeight: 1,
-  };
-  const centerStyle: React.CSSProperties = {
-    fontSize: 'clamp(24px, calc(var(--sol-card-w) * 0.5), 56px)',
-    lineHeight: 1,
-  };
+  // The face is sized by the board layout (layout.ts): the corner row fits the
+  // strip a fanned card shows, and that strip stops above the suit in the middle
+  const rankStyle: React.CSSProperties = { fontSize: 'var(--sol-rank, 16px)', lineHeight: 1 };
+  const pipStyle: React.CSSProperties = { fontSize: 'var(--sol-pip, 14px)', lineHeight: 1 };
+  const centerStyle: React.CSSProperties = { fontSize: 'var(--sol-center, 24px)', lineHeight: 1 };
 
   return (
     <div

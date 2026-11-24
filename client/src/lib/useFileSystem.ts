@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { resumeText } from "./resume";
 
 type FileSystemContent = string | FileSystem;
 
@@ -8,43 +9,7 @@ interface FileSystem {
 
 const INITIAL_FILESYSTEM: FileSystem = {
   "~": {
-    "resume.txt": `===========================================
-              MAGNUS CARDELL
-===========================================
-
-EMAIL: cardell.magnus[at]gmail.com
-LINKEDIN: linkedin.com/in/magnuscardell
-GITHUB: github.com/MagnusCardell
-
--------------------------------------------
-EXPERIENCE (Selected)
--------------------------------------------
-PwC (via Netlight) - Software Architect (2024-Present)
-• Led architectural modernization effort across regulated financial systems
-• Developed a C# and JavaScript DSL with recursive parsing to enable configurable workflows
-• Mentored junior engineers and contributed to internal hiring efforts
-
-Netlight Consulting - Senior Consultant (2020-Present)
-• Built cloud-based systems in Azure/AWS for enterprise clients
-
-Handelsbanken Capital Markets - Software Engineer (2018-2020)
-• Delivered .NET-based financial tools for reporting and forecasting
-
-Lux Science Inc. - Fullstack Developer (2017-2018)
-• Built an educational payments platform with Stripe, PHP, and DynamoDB
-
--------------------------------------------
-SKILLS
--------------------------------------------
-Languages: C#, Go, TypeScript, Python, Bash
-Cloud: Azure, AWS, Docker, Kubernetes, Terraform
-Dev: CI/CD, OAuth2, TDD, System Design, Observability
-
--------------------------------------------
-EDUCATION
--------------------------------------------
-St. Olaf College - BA Computer Science & Music (2014-2018)
-• Christiansen Scholarship recipient`,
+    "resume.txt": resumeText(),
     projects: {
       "website.md":
         "# Personal Website\n\nAn interactive terminal-based resume website built with React and Express.",

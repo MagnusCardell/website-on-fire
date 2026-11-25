@@ -1,6 +1,33 @@
 /* client/solitaire/solitaire.css */
 
-/* Only keep game-specific animations/utilities. No #root styling here. */
+/* The game's whole stylesheet. It is built from the game's own folder
+   (tailwind.solitaire.config.ts) and shares nothing with the site. */
+@config "../../tailwind.solitaire.config.ts";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+/* Named here so the hover and screen-size rules stay ahead of the game's own
+   rules below. Left out, Tailwind puts them at the end of the file. */
+@tailwind variants;
+
+:root {
+  --foreground: 20 14.3% 4.1%;
+  --border: 20 5.9% 90%;
+  --radius: 0.5rem;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased text-foreground;
+  }
+}
+
+/* Game-specific animations/utilities. No #root styling here. */
 
 @keyframes scale-in {
   0% { transform: scale(0.96); opacity: 0; }

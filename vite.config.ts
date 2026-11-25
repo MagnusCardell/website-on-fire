@@ -20,11 +20,10 @@ export default defineConfig({
   build: {
     outDir: path.resolve(__dirname, "dist/public"),
     emptyOutDir: true,
-    manifest: true,
     rollupOptions: {
+      // The solitaire has its own build: vite.solitaire.config.ts
       input: {
         main: path.resolve(__dirname, "client/index.html"),
-        solitaire: path.resolve(__dirname, "client/solitaire/index.html"),
       },
     },
   },

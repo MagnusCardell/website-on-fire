@@ -3,9 +3,11 @@ import { createHash } from 'crypto';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import {
+  SCOPE,
   SHELL_FILES,
   collectEntryFiles,
   missingFromPrecache,
+  outsideScope,
   stampServiceWorker,
   type ViteManifest,
 } from './sw-precache';
@@ -27,6 +29,14 @@ const precache = [...SHELL_FILES, ...collectEntryFiles(manifest, 'solitaire/inde
 const missing = missingFromPrecache(html, precache);
 if (missing.length > 0) {
   console.error('solitaire/index.html loads files the service worker does not cache:', missing);
+  process.exit(1);
+}
+
+// The game must not cache a file the site's build writes, or a change to the
+// site becomes a new version of the game. Fail the build instead.
+const outside = outsideScope(precache, SCOPE);
+if (outside.length > 0) {
+  console.error(`the service worker would cache files outside ${SCOPE}:`, outside);
   process.exit(1);
 }
 

@@ -1,8 +1,11 @@
 import { describe, expect, test } from 'bun:test';
 import {
+  SCOPE,
+  SHELL_FILES,
   collectEntryFiles,
   htmlReferences,
   missingFromPrecache,
+  outsideScope,
   stampServiceWorker,
   type ViteManifest,
 } from './sw-precache';
@@ -60,6 +63,22 @@ describe('service worker precache list', () => {
     // the list before the fix: the entry's own files, without what it imports
     const entryOnly = ['/solitaire/manifest.webmanifest', '/solitaire/icon-192.png', '/assets/solitaire-EEEE.js', '/assets/solitaire-FFFF.css'];
     expect(missingFromPrecache(html, entryOnly)).toEqual(['/assets/shared-AAAA.js', '/assets/shared-BBBB.css']);
+  });
+
+  test('names cached files served from outside the game folder', () => {
+    const own = ['/solitaire/', '/solitaire/icon-192.png', '/solitaire/assets/solitaire-EEEE.js'];
+    expect(outsideScope(own, SCOPE)).toEqual([]);
+    // the list before the game had its own build: a script and a stylesheet shared with the site
+    expect(outsideScope([...own, '/assets/shared-AAAA.js', '/assets/shared-BBBB.css'], SCOPE)).toEqual([
+      '/assets/shared-AAAA.js',
+      '/assets/shared-BBBB.css',
+    ]);
+    // a folder that only starts with the same letters is not the game's folder
+    expect(outsideScope(['/solitaire-old/x.js'], SCOPE)).toEqual(['/solitaire-old/x.js']);
+  });
+
+  test('the files the page always needs are inside the game folder', () => {
+    expect(outsideScope(SHELL_FILES, SCOPE)).toEqual([]);
   });
 
   test('stamps the worker and refuses a worker without markers', () => {

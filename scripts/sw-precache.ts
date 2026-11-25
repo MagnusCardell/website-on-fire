@@ -56,6 +56,16 @@ export function missingFromPrecache(html: string, precache: string[]): string[] 
   return htmlReferences(html).filter((ref) => !cached.has(ref));
 }
 
+// The folder the game is built into and served from
+export const SCOPE = '/solitaire/';
+
+// Cached files served from outside the game's folder. Everything out there is
+// written by the site's build, so such a file changes when the site does, and
+// every installed copy of the game would download itself again.
+export function outsideScope(precache: string[], scope: string): string[] {
+  return precache.filter((file) => !file.startsWith(scope));
+}
+
 export function stampServiceWorker(source: string, buildId: string, precache: string[]): string {
   const idMarker = /const BUILD_ID = 'dev'; \/\/ __BUILD_ID__/;
   const listMarker = /^[ \t]*\/\/ __PRECACHE__$/m;
